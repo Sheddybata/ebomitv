@@ -20,6 +20,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Ebomi TV",
   description: "Watch live streams, sermons, and gospel content from EBOMI Ministries",
+  icons: {
+    icon: "/logo/ebomilogo.png",
+    shortcut: "/logo/ebomilogo.png",
+    apple: "/logo/ebomilogo.png",
+  },
 };
 
 export default function RootLayout({
