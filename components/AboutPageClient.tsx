@@ -71,9 +71,8 @@ export default function AboutPageClient() {
                   initial={{ opacity: 0, y: 12 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.1, type: "spring", stiffness: 240, damping: 18 }}
                   whileHover={{ y: -3 }}
-                  transition={{ type: "spring", stiffness: 240, damping: 18 }}
                 >
                   <p className="text-sm font-semibold text-foreground">{t("about.card.mandate.title")}</p>
                   <p className="mt-1 text-foreground/70 text-sm leading-relaxed">
@@ -85,9 +84,8 @@ export default function AboutPageClient() {
                   initial={{ opacity: 0, y: 12 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
+                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.2, type: "spring", stiffness: 240, damping: 18 }}
                   whileHover={{ y: -3 }}
-                  transition={{ type: "spring", stiffness: 240, damping: 18 }}
                 >
                   <p className="text-sm font-semibold text-foreground">{t("about.card.message.title")}</p>
                   <p className="mt-1 text-foreground/70 text-sm leading-relaxed">
@@ -192,9 +190,8 @@ export default function AboutPageClient() {
                     initial={{ opacity: 0, y: 12 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.6, ease: "easeOut", delay: index * 0.1 }}
+                    transition={{ duration: 0.6, ease: "easeOut", delay: index * 0.1, type: "spring", stiffness: 240, damping: 18 }}
                     whileHover={{ y: -3 }}
-                    transition={{ type: "spring", stiffness: 240, damping: 18 }}
                   >
                     <p className="text-foreground font-semibold">{item.title}</p>
                     <p className="mt-2 text-foreground/70 text-sm leading-relaxed">

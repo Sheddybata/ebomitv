@@ -174,7 +174,7 @@ export default function GalleryPage() {
                   onClick={() => setSearchQuery("")}
                   className="px-4 py-2 bg-[rgba(var(--foreground),0.05)] text-foreground/80 border border-[rgba(var(--foreground),0.1)] text-sm font-semibold rounded-full flex items-center gap-2 hover:bg-[rgba(var(--foreground),0.1)] transition-colors"
                 >
-                  "{searchQuery}"
+                  &quot;{searchQuery}&quot;
                   <X className="w-4 h-4" />
                 </button>
               )}

@@ -450,7 +450,7 @@ export default function LiveStream({ onStreamStatusChange, skipIntro = false }: 
                 <div className="text-center px-6">
                   <p className="text-white text-lg font-bold mb-2">YouTube Video Unavailable</p>
                   <p className="text-white/70 text-sm mb-4">
-                    The live stream video may no longer be available or you don't have permission to view it.
+                    The live stream video may no longer be available or you don&apos;t have permission to view it.
                   </p>
                   <button
                     onClick={() => {

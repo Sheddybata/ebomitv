@@ -99,7 +99,6 @@ export default function LiveChat() {
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-          placeholder="Type a message..."
           placeholder={t("liveChat.placeholder")}
           className="flex-1 bg-foreground/5 border border-ministry-gold/30 rounded-md px-3 py-2 text-foreground placeholder-foreground/40 focus:outline-none focus:border-ministry-gold"
         />

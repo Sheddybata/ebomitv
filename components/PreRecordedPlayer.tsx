@@ -229,7 +229,7 @@ export default function PreRecordedPlayer({
             </div>
             <h3 className="text-white text-xl font-bold mb-2">Video Unavailable</h3>
             <p className="text-white/70 text-sm mb-4">
-              This video may no longer exist, or you don't have permission to view it.
+              This video may no longer exist, or you don&apos;t have permission to view it.
             </p>
             {retryCount >= 5 ? (
               <p className="text-white/50 text-xs">
