@@ -42,8 +42,8 @@ export const SUPPORTED_LANGUAGES: Language[] = LANGUAGES.map((lang) => ({
 }));
 
 interface LanguageSelectorProps {
-  currentLanguage: string;
-  onLanguageChange: (languageCode: string) => void;
+  currentLanguage: LanguageCode;
+  onLanguageChange: (languageCode: LanguageCode) => void;
 }
 
 export default function LanguageSelector({
