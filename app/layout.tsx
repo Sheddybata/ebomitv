@@ -18,8 +18,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Ministry Platform",
-  description: "Modern church ministry platform",
+  title: "Ebomi TV",
+  description: "Watch live streams, sermons, and gospel content from EBOMI Ministries",
 };
 
 export default function RootLayout({
