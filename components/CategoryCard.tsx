@@ -8,7 +8,7 @@ interface CategoryCardProps {
   category: {
     value: VideoCategory;
     label: string;
-    icon: string;
+    icon?: string;
     image: string;
   };
   isSelected: boolean;
