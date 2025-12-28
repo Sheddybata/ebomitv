@@ -212,7 +212,6 @@ export default function PreRecordedPlayer({
           ref={introVideoRef}
           className="w-full h-full object-contain bg-black"
           playsInline
-          // @ts-expect-error - legacy iOS attribute support
           webkit-playsinline="true"
           muted
           controlsList="nofullscreen noremoteplayback nodownload"

@@ -71,7 +71,7 @@ export function generateWeeklySchedule(): TVProgram[] {
         thumbnail: video.thumbnail,
         startTime: start,
         endTime: end,
-        type: video.category === "praise" ? "worship" : video.category === "podcast" ? "podcast" : "sermon",
+        type: video.category === "praise" ? "worship" : video.category === "podcast" ? "teaching" : "sermon",
         channel: "Main",
         isLive: false,
       });

@@ -21,6 +21,7 @@ export default function DonationWidget({
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useI18n();
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Use forceOpen prop if provided, otherwise use internal state
   const modalOpen = forceOpen !== undefined ? forceOpen : isOpen;

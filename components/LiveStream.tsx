@@ -344,7 +344,6 @@ export default function LiveStream({ onStreamStatusChange, skipIntro = false }: 
           ref={introVideoRef}
           className="w-full h-full object-contain"
           playsInline
-          // @ts-expect-error - legacy iOS attribute support
           webkit-playsinline="true"
           // Keep playback inline + reduce accidental fullscreen routes on mobile browsers
           controlsList="nofullscreen noremoteplayback nodownload"
@@ -490,7 +489,6 @@ export default function LiveStream({ onStreamStatusChange, skipIntro = false }: 
                   ref={introVideoRef}
                   className="w-full h-full object-contain"
                   playsInline
-                  // @ts-expect-error - legacy iOS attribute support
                   webkit-playsinline="true"
                   controlsList="nofullscreen noremoteplayback nodownload"
                   disablePictureInPicture
