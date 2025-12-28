@@ -73,7 +73,7 @@ export default function GalleryPage() {
       <AmbientBackground />
       <Navbar />
 
-      <div className="relative z-10 pt-20 pb-12 px-4 md:px-6">
+      <div className="relative z-10 pt-20 md:pt-24 lg:pt-28 pb-12 px-4 md:px-6">
         <div className="max-w-7xl mx-auto">
           {/* Language Selector - Positioned above hero */}
           <div className="flex justify-end mb-10">

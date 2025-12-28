@@ -23,7 +23,7 @@ export default function Home() {
       <AmbientBackground />
       <Navbar />
       
-      <div className="relative z-10 pt-20 pb-6 px-4 md:px-6">
+      <div className="relative z-10 pt-20 md:pt-24 lg:pt-28 pb-6 px-4 md:px-6">
         <div className="max-w-7xl mx-auto">
           {/* Theme and Language Selector - Top */}
           <div className="mb-4 md:mb-6 flex items-center justify-end">
