@@ -49,6 +49,12 @@ export default function Navbar() {
             >
               {t("nav.about")}
             </Link>
+            <Link
+              href="/live"
+              className="text-foreground/70 hover:text-ministry-gold transition-colors text-sm font-medium tracking-wide relative after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-0.5 after:bg-ministry-gold after:scale-x-0 hover:after:scale-x-100 after:transition-transform"
+            >
+              Live
+            </Link>
           </div>
           <div className="hidden md:block">
             {/* Added a placeholder selector here if needed, or we can move the main one to navbar */}
@@ -99,6 +105,13 @@ export default function Navbar() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {t("nav.about")}
+              </Link>
+              <Link
+                href="/live"
+                className="block px-4 py-2 text-foreground/80 hover:text-foreground hover:bg-[rgba(var(--foreground),0.12)] rounded-lg transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Live
               </Link>
             </div>
           </motion.div>
