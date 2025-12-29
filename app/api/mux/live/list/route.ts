@@ -1,13 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import Mux from "@mux/mux-node";
 
-const mux = new Mux({
-  tokenId: process.env.MUX_TOKEN_ID,
-  tokenSecret: process.env.MUX_TOKEN_SECRET,
-});
+// Initialize Mux client only if credentials are available
+function getMuxClient() {
+  const tokenId = process.env.MUX_TOKEN_ID;
+  const tokenSecret = process.env.MUX_TOKEN_SECRET;
+
+  if (!tokenId || !tokenSecret) {
+    throw new Error("Mux credentials not configured. Please set MUX_TOKEN_ID and MUX_TOKEN_SECRET in your environment variables.");
+  }
+
+  return new Mux({
+    tokenId,
+    tokenSecret,
+  });
+}
 
 export async function GET(request: NextRequest) {
   try {
+    const mux = getMuxClient();
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "10");
     const page = parseInt(searchParams.get("page") || "1");
@@ -34,6 +45,20 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Error listing live streams:", error);
+    
+    // Check for authentication errors
+    if (error.message?.includes("credentials not configured") || 
+        error.message?.includes("tokenId and tokenSecret")) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Mux credentials not configured. Please set MUX_TOKEN_ID and MUX_TOKEN_SECRET in your environment variables.",
+          help: "For local development, add these to .env.local. For production (Vercel), add them in Project Settings → Environment Variables.",
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       {
         success: false,

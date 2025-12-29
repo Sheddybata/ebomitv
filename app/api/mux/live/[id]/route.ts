@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import Mux from "@mux/mux-node";
 
-const mux = new Mux({
-  tokenId: process.env.MUX_TOKEN_ID,
-  tokenSecret: process.env.MUX_TOKEN_SECRET,
-});
+// Initialize Mux client only if credentials are available
+function getMuxClient() {
+  const tokenId = process.env.MUX_TOKEN_ID;
+  const tokenSecret = process.env.MUX_TOKEN_SECRET;
+
+  if (!tokenId || !tokenSecret) {
+    throw new Error("Mux credentials not configured. Please set MUX_TOKEN_ID and MUX_TOKEN_SECRET in your environment variables.");
+  }
+
+  return new Mux({
+    tokenId,
+    tokenSecret,
+  });
+}
 
 // GET - Get live stream status
 export async function GET(
@@ -12,6 +22,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const mux = getMuxClient();
     const { id } = params;
     const liveStream = await mux.video.liveStreams.retrieve(id);
 
@@ -44,6 +55,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const mux = getMuxClient();
     const { id } = params;
     await mux.video.liveStreams.delete(id);
 

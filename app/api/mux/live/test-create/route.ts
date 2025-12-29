@@ -1,25 +1,25 @@
 import { NextResponse } from "next/server";
 import Mux from "@mux/mux-node";
 
-// Initialize Mux client
-const mux = new Mux({
-  tokenId: process.env.MUX_TOKEN_ID,
-  tokenSecret: process.env.MUX_TOKEN_SECRET,
-});
+// Initialize Mux client only if credentials are available
+function getMuxClient() {
+  const tokenId = process.env.MUX_TOKEN_ID;
+  const tokenSecret = process.env.MUX_TOKEN_SECRET;
+
+  if (!tokenId || !tokenSecret) {
+    throw new Error("Mux credentials not configured. Please set MUX_TOKEN_ID and MUX_TOKEN_SECRET in your environment variables.");
+  }
+
+  return new Mux({
+    tokenId,
+    tokenSecret,
+  });
+}
 
 // Simple test endpoint to create a live stream
 export async function GET() {
   try {
-    // Check if Mux credentials are configured
-    if (!process.env.MUX_TOKEN_ID || !process.env.MUX_TOKEN_SECRET) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Mux credentials not configured. Please set MUX_TOKEN_ID and MUX_TOKEN_SECRET in your environment variables.",
-        },
-        { status: 500 }
-      );
-    }
+    const mux = getMuxClient();
 
     // Create a new live stream
     const liveStream = await mux.video.liveStreams.create({

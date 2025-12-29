@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import Mux from "@mux/mux-node";
 
-// Initialize Mux client
-const mux = new Mux({
-  tokenId: process.env.MUX_TOKEN_ID,
-  tokenSecret: process.env.MUX_TOKEN_SECRET,
-});
+// Initialize Mux client only if credentials are available
+function getMuxClient() {
+  const tokenId = process.env.MUX_TOKEN_ID;
+  const tokenSecret = process.env.MUX_TOKEN_SECRET;
+
+  if (!tokenId || !tokenSecret) {
+    throw new Error("Mux credentials not configured. Please set MUX_TOKEN_ID and MUX_TOKEN_SECRET in your environment variables.");
+  }
+
+  return new Mux({
+    tokenId,
+    tokenSecret,
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
+    const mux = getMuxClient();
     const body = await request.json();
     const { playbackPolicy = "public", reconnectWindow = 60 } = body;
 
