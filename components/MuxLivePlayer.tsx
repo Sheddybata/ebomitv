@@ -124,7 +124,9 @@ export default function MuxLivePlayer({
             viewer_user_id: "anonymous",
           }}
           autoPlay={autoPlay}
-          muted={!autoPlay}
+          muted={autoPlay ? false : false}
+          playsInline
+          preload="auto"
           onPlay={() => {
             setIsLive(true);
             onStreamStatusChange?.(true);
@@ -170,15 +172,6 @@ export default function MuxLivePlayer({
         )}
       </div>
 
-      {/* Stream Info (for testing - shows stream key if provided) */}
-      {streamKey && process.env.NODE_ENV === "development" && (
-        <div className="mt-4 p-4 bg-foreground/5 rounded-lg border border-foreground/10">
-          <p className="text-xs text-foreground/60 mb-2">Stream Key (for OBS):</p>
-          <code className="text-xs bg-black/20 px-2 py-1 rounded font-mono">
-            {streamKey}
-          </code>
-        </div>
-      )}
     </div>
   );
 }

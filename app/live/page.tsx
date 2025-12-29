@@ -7,7 +7,7 @@ import AmbientBackground from "@/components/AmbientBackground";
 import LanguageSelector from "@/components/LanguageSelector";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useI18n } from "@/lib/i18n";
-import { Radio, Loader2, AlertCircle, Copy, Check, PlayCircle } from "lucide-react";
+import { Radio, Loader2, AlertCircle, PlayCircle } from "lucide-react";
 
 interface LiveStream {
   id: string;
@@ -25,7 +25,6 @@ export default function LivePage() {
   const [activeStream, setActiveStream] = useState<LiveStream | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [isLive, setIsLive] = useState(false);
 
   // Fetch active live streams
@@ -87,11 +86,6 @@ export default function LivePage() {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   // Fallback playback ID if API fails (from your existing stream)
   const FALLBACK_PLAYBACK_ID = "JAph4wH6lutzw7cJZbX3r2axeSIrx3OhPsF2RdbR8aI";
@@ -142,7 +136,7 @@ export default function LivePage() {
 
           {/* Live Stream Player - Show if we have a stream or use fallback */}
           {!isLoading && (activeStream || playbackId) && (
-            <div className="mb-8">
+            <div className="max-w-6xl mx-auto">
               {/* Live Status Indicator */}
               <div className="mb-4 text-center">
                 {activeStream && activeStream.status === "active" ? (
@@ -162,34 +156,12 @@ export default function LivePage() {
                 playbackId={playbackId}
                 streamKey={activeStream?.streamKey || ""}
                 title="EBOMI TV Live"
-                autoPlay={false}
+                autoPlay={true}
                 onStreamStatusChange={(isLiveNow) => {
                   setIsLive(isLiveNow);
                   console.log("Stream is live:", isLiveNow);
                 }}
               />
-
-              {/* Stream Info */}
-              {activeStream && (
-                <div className="mt-6 p-4 bg-foreground/5 rounded-lg border border-foreground/10">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-foreground/60">Stream Status:</span>
-                    <span className={`font-semibold capitalize ${
-                      activeStream.status === "active"
-                        ? "text-green-600"
-                        : "text-foreground/80"
-                    }`}>
-                      {activeStream.status}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm mt-1">
-                    <span className="text-foreground/60">Stream ID:</span>
-                    <span className="text-foreground/80 font-mono">
-                      {activeStream.id.slice(0, 12)}...
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -210,110 +182,6 @@ export default function LivePage() {
                 <Radio className="w-4 h-4" />
                 Create Live Stream
               </a>
-            </div>
-          )}
-
-          {/* OBS Setup Guide - Show if we have stream info or show generic instructions */}
-          {(activeStream || error?.includes("credentials")) && (
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Stream Details */}
-              <div className="glass rounded-xl p-6 border border-foreground/10">
-                <h3 className="font-serif text-xl font-bold text-foreground mb-4">
-                  Stream Information
-                </h3>
-                <div className="space-y-3">
-                  {activeStream && (
-                    <>
-                      <div>
-                        <p className="text-sm text-foreground/60 mb-1">Status</p>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`w-2 h-2 rounded-full ${
-                              activeStream.status === "active"
-                                ? "bg-green-500 animate-pulse"
-                                : "bg-gray-400"
-                            }`}
-                          />
-                          <span className="text-foreground font-medium capitalize">
-                            {activeStream.status}
-                          </span>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-sm text-foreground/60 mb-1">Stream ID</p>
-                        <code className="text-xs bg-black/20 px-2 py-1 rounded font-mono text-foreground/80">
-                          {activeStream.id}
-                        </code>
-                      </div>
-                    </>
-                  )}
-                  <div>
-                    <p className="text-sm text-foreground/60 mb-1">Playback ID</p>
-                    <code className="text-xs bg-black/20 px-2 py-1 rounded font-mono text-foreground/80">
-                      {playbackId || "Not available"}
-                    </code>
-                  </div>
-                </div>
-              </div>
-
-              {/* OBS Setup Guide */}
-              <div className="glass rounded-xl p-6 border border-foreground/10">
-                <h3 className="font-serif text-xl font-bold text-foreground mb-4">
-                  OBS Studio Setup
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-foreground/60 mb-2">
-                      RTMP Server URL:
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-xs bg-black/20 px-3 py-2 rounded font-mono text-foreground/90 break-all">
-                        rtmp://global-live.mux.com:5222/app
-                      </code>
-                      <button
-                        onClick={() =>
-                          copyToClipboard("rtmp://global-live.mux.com:5222/app")
-                        }
-                        className="p-2 hover:bg-foreground/10 rounded transition-colors"
-                        title="Copy RTMP URL"
-                      >
-                        {copied ? (
-                          <Check className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <Copy className="w-4 h-4 text-foreground/60" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-foreground/60 mb-2">Stream Key:</p>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-xs bg-black/20 px-3 py-2 rounded font-mono text-foreground/90 break-all">
-                        {activeStream?.streamKey || "Get from Mux Dashboard or create a new stream"}
-                      </code>
-                      {activeStream?.streamKey && (
-                        <button
-                          onClick={() => copyToClipboard(activeStream.streamKey)}
-                          className="p-2 hover:bg-foreground/10 rounded transition-colors"
-                          title="Copy Stream Key"
-                        >
-                          {copied ? (
-                            <Check className="w-4 h-4 text-green-500" />
-                          ) : (
-                            <Copy className="w-4 h-4 text-foreground/60" />
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="mt-4 pt-4 border-t border-foreground/10">
-                    <p className="text-xs text-foreground/60">
-                      Use these credentials in OBS Studio → Settings → Stream →
-                      Custom service
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
         </div>
