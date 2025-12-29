@@ -31,8 +31,13 @@ export default function LivePage() {
   // Fetch active live streams
   useEffect(() => {
     fetchLiveStreams();
-    // Poll for updates every 30 seconds
-    const interval = setInterval(fetchLiveStreams, 30000);
+    // Poll for updates every 30 seconds, but only if we don't have persistent errors
+    const interval = setInterval(() => {
+      // Only poll if we don't have a persistent error
+      if (!error || error.includes("credentials")) {
+        fetchLiveStreams();
+      }
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -40,6 +45,13 @@ export default function LivePage() {
     try {
       setIsLoading(true);
       const response = await fetch("/api/mux/live/list?limit=10");
+      
+      // Check if response is ok
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error: ${response.status}`);
+      }
+
       const data = await response.json();
 
       if (data.success) {
@@ -56,10 +68,20 @@ export default function LivePage() {
 
         setError(null);
       } else {
-        setError(data.error || "Failed to fetch live streams");
+        // Only set error if we don't have an existing stream to show
+        if (!activeStream) {
+          setError(data.error || "Failed to fetch live streams");
+        }
+        // If we have an active stream, just log the error but don't break the UI
+        console.warn("Failed to fetch live streams:", data.error);
       }
     } catch (err: any) {
-      setError(err.message || "Failed to load live streams");
+      // Only set error if we don't have an existing stream
+      if (!activeStream) {
+        setError(err.message || "Failed to load live streams");
+      }
+      // Log error but don't break the UI if we have a stream
+      console.warn("Error fetching live streams:", err.message);
     } finally {
       setIsLoading(false);
     }
@@ -71,7 +93,9 @@ export default function LivePage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const playbackId = activeStream?.playbackIds?.[0]?.id || "";
+  // Fallback playback ID if API fails (from your existing stream)
+  const FALLBACK_PLAYBACK_ID = "JAph4wH6lutzw7cJZbX3r2axeSIrx3OhPsF2RdbR8aI";
+  const playbackId = activeStream?.playbackIds?.[0]?.id || FALLBACK_PLAYBACK_ID;
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-background">
@@ -116,12 +140,12 @@ export default function LivePage() {
             </div>
           )}
 
-          {/* Live Stream Player */}
-          {!isLoading && activeStream && (
+          {/* Live Stream Player - Show if we have a stream or use fallback */}
+          {!isLoading && (activeStream || playbackId) && (
             <div className="mb-8">
               {/* Live Status Indicator */}
               <div className="mb-4 text-center">
-                {activeStream.status === "active" ? (
+                {activeStream && activeStream.status === "active" ? (
                   <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full">
                     <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
                     <span className="font-semibold">LIVE NOW</span>
@@ -136,7 +160,7 @@ export default function LivePage() {
 
               <MuxLivePlayer
                 playbackId={playbackId}
-                streamKey={activeStream.streamKey}
+                streamKey={activeStream?.streamKey || ""}
                 title="EBOMI TV Live"
                 autoPlay={false}
                 onStreamStatusChange={(isLiveNow) => {
@@ -146,24 +170,26 @@ export default function LivePage() {
               />
 
               {/* Stream Info */}
-              <div className="mt-6 p-4 bg-foreground/5 rounded-lg border border-foreground/10">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-foreground/60">Stream Status:</span>
-                  <span className={`font-semibold capitalize ${
-                    activeStream.status === "active"
-                      ? "text-green-600"
-                      : "text-foreground/80"
-                  }`}>
-                    {activeStream.status}
-                  </span>
+              {activeStream && (
+                <div className="mt-6 p-4 bg-foreground/5 rounded-lg border border-foreground/10">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-foreground/60">Stream Status:</span>
+                    <span className={`font-semibold capitalize ${
+                      activeStream.status === "active"
+                        ? "text-green-600"
+                        : "text-foreground/80"
+                    }`}>
+                      {activeStream.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-1">
+                    <span className="text-foreground/60">Stream ID:</span>
+                    <span className="text-foreground/80 font-mono">
+                      {activeStream.id.slice(0, 12)}...
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-sm mt-1">
-                  <span className="text-foreground/60">Stream ID:</span>
-                  <span className="text-foreground/80 font-mono">
-                    {activeStream.id.slice(0, 12)}...
-                  </span>
-                </div>
-              </div>
+              )}
             </div>
           )}
 
@@ -187,8 +213,8 @@ export default function LivePage() {
             </div>
           )}
 
-          {/* OBS Setup Guide - Always visible for active streams */}
-          {activeStream && (
+          {/* OBS Setup Guide - Show if we have stream info or show generic instructions */}
+          {(activeStream || error?.includes("credentials")) && (
             <div className="grid md:grid-cols-2 gap-6">
               {/* Stream Details */}
               <div className="glass rounded-xl p-6 border border-foreground/10">
@@ -196,27 +222,31 @@ export default function LivePage() {
                   Stream Information
                 </h3>
                 <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-foreground/60 mb-1">Status</p>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          activeStream.status === "active"
-                            ? "bg-green-500 animate-pulse"
-                            : "bg-gray-400"
-                        }`}
-                      />
-                      <span className="text-foreground font-medium capitalize">
-                        {activeStream.status}
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-foreground/60 mb-1">Stream ID</p>
-                    <code className="text-xs bg-black/20 px-2 py-1 rounded font-mono text-foreground/80">
-                      {activeStream.id}
-                    </code>
-                  </div>
+                  {activeStream && (
+                    <>
+                      <div>
+                        <p className="text-sm text-foreground/60 mb-1">Status</p>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-2 h-2 rounded-full ${
+                              activeStream.status === "active"
+                                ? "bg-green-500 animate-pulse"
+                                : "bg-gray-400"
+                            }`}
+                          />
+                          <span className="text-foreground font-medium capitalize">
+                            {activeStream.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm text-foreground/60 mb-1">Stream ID</p>
+                        <code className="text-xs bg-black/20 px-2 py-1 rounded font-mono text-foreground/80">
+                          {activeStream.id}
+                        </code>
+                      </div>
+                    </>
+                  )}
                   <div>
                     <p className="text-sm text-foreground/60 mb-1">Playback ID</p>
                     <code className="text-xs bg-black/20 px-2 py-1 rounded font-mono text-foreground/80">
@@ -259,19 +289,21 @@ export default function LivePage() {
                     <p className="text-sm text-foreground/60 mb-2">Stream Key:</p>
                     <div className="flex items-center gap-2">
                       <code className="flex-1 text-xs bg-black/20 px-3 py-2 rounded font-mono text-foreground/90 break-all">
-                        {activeStream.streamKey}
+                        {activeStream?.streamKey || "Get from Mux Dashboard or create a new stream"}
                       </code>
-                      <button
-                        onClick={() => copyToClipboard(activeStream.streamKey)}
-                        className="p-2 hover:bg-foreground/10 rounded transition-colors"
-                        title="Copy Stream Key"
-                      >
-                        {copied ? (
-                          <Check className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <Copy className="w-4 h-4 text-foreground/60" />
-                        )}
-                      </button>
+                      {activeStream?.streamKey && (
+                        <button
+                          onClick={() => copyToClipboard(activeStream.streamKey)}
+                          className="p-2 hover:bg-foreground/10 rounded transition-colors"
+                          title="Copy Stream Key"
+                        >
+                          {copied ? (
+                            <Check className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <Copy className="w-4 h-4 text-foreground/60" />
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="mt-4 pt-4 border-t border-foreground/10">

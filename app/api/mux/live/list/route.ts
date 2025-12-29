@@ -48,14 +48,15 @@ export async function GET(request: NextRequest) {
     
     // Check for authentication errors
     if (error.message?.includes("credentials not configured") || 
-        error.message?.includes("tokenId and tokenSecret")) {
+        error.message?.includes("tokenId and tokenSecret") ||
+        error.message?.includes("authentication method")) {
       return NextResponse.json(
         {
           success: false,
           error: "Mux credentials not configured. Please set MUX_TOKEN_ID and MUX_TOKEN_SECRET in your environment variables.",
           help: "For local development, add these to .env.local. For production (Vercel), add them in Project Settings → Environment Variables.",
         },
-        { status: 500 }
+        { status: 401 }
       );
     }
 
@@ -63,6 +64,7 @@ export async function GET(request: NextRequest) {
       {
         success: false,
         error: error.message || "Failed to list live streams",
+        details: process.env.NODE_ENV === "development" ? error.toString() : undefined,
       },
       { status: 500 }
     );
