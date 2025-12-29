@@ -193,7 +193,7 @@ export default function CreateLiveStreamPage() {
                     3
                   </span>
                   <span>
-                    Set <strong>Service</strong> to <strong>"Custom"</strong>
+                    Set <strong>Service</strong> to <strong>&quot;Custom&quot;</strong>
                   </span>
                 </li>
                 <li className="flex gap-3">
@@ -225,7 +225,7 @@ export default function CreateLiveStreamPage() {
                     7
                   </span>
                   <span>
-                    Click <strong>"Start Streaming"</strong> in OBS
+                    Click <strong>&quot;Start Streaming&quot;</strong> in OBS
                   </span>
                 </li>
                 <li className="flex gap-3">

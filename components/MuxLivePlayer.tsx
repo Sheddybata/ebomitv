@@ -15,10 +15,11 @@ const disableMuxAnalytics = () => {
     const originalSendBeacon = navigator.sendBeacon;
     navigator.sendBeacon = function(url, data) {
       // Block Mux analytics and tracking requests
+      const urlString = url.toString();
       if (url && (
-        url.includes('litix.io') ||
-        url.includes('mux.com/analytics') ||
-        url.includes('inferred.litix.io')
+        urlString.includes('litix.io') ||
+        urlString.includes('mux.com/analytics') ||
+        urlString.includes('inferred.litix.io')
       )) {
         return true; // Pretend success
       }
@@ -132,7 +133,7 @@ export default function MuxLivePlayer({
             setIsLive(false);
             onStreamStatusChange?.(false);
           }}
-          onError={(error) => {
+          onError={(error: Error) => {
             console.error("Mux player error:", error);
             // Don't set error for analytics-related errors
             if (!error?.message?.includes('ERR_BLOCKED_BY_CLIENT') &&

@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import Mux from "@mux/mux-node";
 
 // Initialize Mux client
-const mux = new Mux(
-  process.env.MUX_TOKEN_ID,
-  process.env.MUX_TOKEN_SECRET
-);
+const mux = new Mux({
+  tokenId: process.env.MUX_TOKEN_ID,
+  tokenSecret: process.env.MUX_TOKEN_SECRET,
+});
 
 // Simple test endpoint to create a live stream
 export async function GET() {
@@ -23,7 +23,7 @@ export async function GET() {
 
     // Create a new live stream
     const liveStream = await mux.video.liveStreams.create({
-      playback_policy: [{ type: "public" }],
+      playback_policy: ["public"],
       reconnect_window: 60,
     });
 

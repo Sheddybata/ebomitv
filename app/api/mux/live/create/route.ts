@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import Mux from "@mux/mux-node";
 
 // Initialize Mux client
-const mux = new Mux(
-  process.env.MUX_TOKEN_ID,
-  process.env.MUX_TOKEN_SECRET
-);
+const mux = new Mux({
+  tokenId: process.env.MUX_TOKEN_ID,
+  tokenSecret: process.env.MUX_TOKEN_SECRET,
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,12 +14,12 @@ export async function POST(request: NextRequest) {
 
     // Create a new live stream
     const liveStream = await mux.video.liveStreams.create({
-      playback_policy: playbackPolicy === "public" 
-        ? [{ type: "public" }] 
-        : [{ type: "signed" }],
+      playback_policy: playbackPolicy === "public"
+        ? ["public"]
+        : ["signed"],
       reconnect_window: reconnectWindow,
       new_asset_settings: {
-        playback_policy: [{ type: "public" }],
+        playback_policy: ["public"],
         mp4_support: "standard",
       },
     });
