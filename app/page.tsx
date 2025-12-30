@@ -10,8 +10,11 @@ import PrayerRequestWidget from "@/components/PrayerRequestWidget";
 import GiveButton from "@/components/GiveButton";
 import LanguageSelector from "@/components/LanguageSelector";
 import AmbientBackground from "@/components/AmbientBackground";
+import GuidedTour from "@/components/GuidedTour";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useI18n } from "@/lib/i18n";
+import Link from "next/link";
+import { Radio } from "lucide-react";
 
 export default function Home() {
   const { language, setLanguage } = useLanguage();
@@ -22,6 +25,7 @@ export default function Home() {
     <main className="relative min-h-screen overflow-hidden bg-background">
       <AmbientBackground />
       <Navbar />
+      <GuidedTour />
       
       <div className="relative z-10 pt-20 md:pt-24 lg:pt-28 pb-6 px-4 md:px-6">
         <div className="max-w-7xl mx-auto">
@@ -32,12 +36,21 @@ export default function Home() {
 
           {/* Header Text - Below Theme/Language */}
           <div className="mb-4 md:mb-6">
-            <h1 className="font-serif text-2xl md:text-4xl lg:text-5xl font-bold mb-1 md:mb-2 text-foreground">
-              {t("home.title")}
-            </h1>
-            <p className="text-foreground/70 text-sm md:text-lg">
-              {t("home.subtitle")}
-            </p>
+              <h1 className="font-serif text-2xl md:text-4xl lg:text-5xl font-bold mb-1 md:mb-2 text-foreground">
+                {t("home.title")}
+              </h1>
+              <p className="text-foreground/70 text-sm md:text-lg">
+                {t("home.subtitle")}
+              </p>
+              <div className="mt-3">
+                <Link
+                  href="/live"
+                  className="inline-flex items-center gap-2 bg-ministry-red hover:bg-ministry-red/90 text-white px-4 py-2.5 md:px-6 md:py-3 rounded-full shadow-lg font-bold text-sm md:text-base transition-colors"
+                >
+                  <Radio className="w-4 h-4 md:w-5 md:h-5" />
+                  Click here to watch live
+                </Link>
+              </div>
           </div>
 
           {/* Main Content */}

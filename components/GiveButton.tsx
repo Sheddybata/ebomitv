@@ -13,6 +13,7 @@ export default function GiveButton() {
       <motion.button
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
+        data-tour="give"
         className="bg-ministry-red hover:bg-ministry-red/90 text-white px-4 py-2.5 md:px-6 md:py-3 rounded-full shadow-lg flex items-center gap-2 font-semibold text-sm md:text-base"
         onClick={() => setIsOpen(true)}
       >
@@ -31,6 +32,7 @@ export default function GiveButton() {
     </>
   );
 }
+
 
 
 

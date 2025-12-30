@@ -69,6 +69,7 @@ export default function LanguageSelector({
       {mounted && (
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          data-tour="theme-toggle"
           className="flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-lg glass hover:bg-[rgba(var(--foreground),0.1)] transition-all text-foreground/70 hover:text-foreground"
           aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
         >
@@ -89,6 +90,7 @@ export default function LanguageSelector({
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
+          data-tour="language-selector"
           className="flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 glass rounded-lg hover:bg-[rgba(var(--foreground),0.1)] transition-colors"
           aria-label="Select language"
         >

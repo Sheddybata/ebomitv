@@ -39,6 +39,7 @@ export default function Navbar() {
             </Link>
             <Link
               href="/gallery"
+              data-tour="nav-gallery"
               className="text-foreground/70 hover:text-ministry-gold transition-colors text-sm font-medium tracking-wide relative after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-0.5 after:bg-ministry-gold after:scale-x-0 hover:after:scale-x-100 after:transition-transform"
             >
               {t("nav.gallery")}
@@ -51,6 +52,7 @@ export default function Navbar() {
             </Link>
             <Link
               href="/live"
+              data-tour="nav-live"
               className="text-foreground/70 hover:text-ministry-gold transition-colors text-sm font-medium tracking-wide relative after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-0.5 after:bg-ministry-gold after:scale-x-0 hover:after:scale-x-100 after:transition-transform"
             >
               Live
@@ -64,7 +66,7 @@ export default function Navbar() {
         {/* Mobile Menu Button */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden text-foreground p-2 hover:bg-[rgba(var(--foreground),0.12)] rounded-lg transition-colors"
+          className="md:hidden text-foreground p-2 hover:bg-[rgba(var(--foreground),0.12)] rounded-lg transition-colors flex items-center gap-2"
           aria-label="Menu"
         >
           {mobileMenuOpen ? (
@@ -72,6 +74,7 @@ export default function Navbar() {
           ) : (
             <Menu className="w-6 h-6" />
           )}
+          <span className="text-sm font-medium">menu</span>
         </button>
       </div>
 
@@ -94,6 +97,7 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/gallery"
+                data-tour="nav-gallery"
                 className="block px-4 py-2 text-foreground/80 hover:text-foreground hover:bg-[rgba(var(--foreground),0.12)] rounded-lg transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -108,6 +112,7 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/live"
+                data-tour="nav-live"
                 className="block px-4 py-2 text-foreground/80 hover:text-foreground hover:bg-[rgba(var(--foreground),0.12)] rounded-lg transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
