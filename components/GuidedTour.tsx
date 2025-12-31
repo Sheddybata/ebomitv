@@ -70,7 +70,7 @@ export default function GuidedTour() {
         target: "body",
         placement: "center",
         title: "Quick tour",
-        content: "Here’s where to find Live services, Gallery, Prayer Request, Give, Theme, and Language.",
+        content: "Welcome! Scroll down to explore Gallery videos and About section. Use the navigation for Home and Live.",
         disableBeacon: true,
       },
       {
@@ -81,10 +81,10 @@ export default function GuidedTour() {
         disableBeacon: true,
       },
       {
-        target: "[data-tour='nav-gallery']",
-        placement: "bottom",
+        target: "#gallery",
+        placement: "top",
         title: "Gallery",
-        content: "Browse photos and media in the Gallery.",
+        content: "Scroll down to browse all videos in the Gallery section. You can search and filter by category.",
         disableBeacon: true,
       },
       {
@@ -102,6 +102,13 @@ export default function GuidedTour() {
         disableBeacon: true,
         disableScrolling: false, // Ensure it scrolls into view
         scrollOffset: 20, // Add some offset from top
+      },
+      {
+        target: "#about",
+        placement: "top",
+        title: "About",
+        content: "Scroll to the bottom to learn more about EBOMI TV and how to get involved.",
+        disableBeacon: true,
       },
       {
         target: "[data-tour='theme-toggle']",

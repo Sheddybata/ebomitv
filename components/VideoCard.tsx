@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { GalleryVideo } from "@/lib/gallery-data";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useI18n } from "@/lib/i18n";
+import { translateVideoText } from "@/lib/video-translations";
 
 interface VideoCardProps {
   video: GalleryVideo;
@@ -13,15 +15,25 @@ interface VideoCardProps {
 
 export default function VideoCard({ video, onPlay }: VideoCardProps) {
   const { language } = useLanguage();
+  const { t } = useI18n();
 
   const pick = (base?: string, localized?: Record<string, string>) =>
     (localized && localized[language]) || base || "";
 
-  const title = pick(video.title, video.titleLocalized);
-  const description = pick(video.description, video.descriptionLocalized);
+  // Get base values (with localized fallback if available)
+  const baseTitle = pick(video.title, video.titleLocalized);
+  const baseDescription = pick(video.description, video.descriptionLocalized);
   const preacher = pick(video.preacher, video.preacherLocalized);
   const guest = pick(video.guest, video.guestLocalized);
   const date = pick(video.date, video.dateLocalized);
+
+  // Apply automatic translations if no localized data exists
+  const title = video.titleLocalized ? baseTitle : translateVideoText(baseTitle, language);
+  const description = video.descriptionLocalized ? baseDescription : translateVideoText(baseDescription, language);
+
+  const getCategoryLabel = (category: GalleryVideo["category"]) => {
+    return t(`category.${category}` as any);
+  };
 
   const handleClick = () => {
     if (onPlay) {
@@ -77,7 +89,7 @@ export default function VideoCard({ video, onPlay }: VideoCardProps) {
           <span
             className={`px-2 py-1 ${getCategoryColor(video.category)} text-white text-[10px] font-bold rounded tracking-wider`}
           >
-            {video.category.toUpperCase()}
+            {getCategoryLabel(video.category).toUpperCase()}
           </span>
         </div>
 

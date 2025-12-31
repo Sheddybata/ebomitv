@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { VideoCategory } from "@/lib/gallery-data";
+import { useI18n } from "@/lib/i18n";
 
 interface CategoryCardProps {
   category: {
@@ -22,6 +23,8 @@ export default function CategoryCard({
   onClick,
   count,
 }: CategoryCardProps) {
+  const { t } = useI18n();
+
   return (
     <motion.button
       onClick={onClick}
@@ -65,7 +68,7 @@ export default function CategoryCard({
           </h3>
           {count !== undefined && (
             <p className="text-ministry-gold/90 text-[10px] md:text-xs font-semibold uppercase tracking-[0.2em]">
-              {count} {count === 1 ? "Video" : "Videos"}
+              {count} {count === 1 ? t("category.video") : t("category.videos")}
             </p>
           )}
         </div>

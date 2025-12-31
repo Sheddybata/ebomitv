@@ -33,19 +33,51 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-8">
             <Link
               href="/"
-              className="text-foreground/70 hover:text-ministry-gold transition-colors text-sm font-medium tracking-wide"
+              className="text-foreground/70 hover:text-ministry-gold transition-colors text-sm font-medium tracking-wide relative after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-0.5 after:bg-ministry-gold after:scale-x-0 hover:after:scale-x-100 after:transition-transform"
             >
               {t("nav.home")}
             </Link>
             <Link
-              href="/gallery"
+              href="/#gallery"
               data-tour="nav-gallery"
+              onClick={(e) => {
+                // If we're already on home page, scroll smoothly
+                if (window.location.pathname === '/') {
+                  e.preventDefault();
+                  const element = document.getElementById('gallery');
+                  if (element) {
+                    const offset = 100; // Account for fixed navbar
+                    const elementPosition = element.getBoundingClientRect().top;
+                    const offsetPosition = elementPosition + window.pageYOffset - offset;
+                    window.scrollTo({
+                      top: offsetPosition,
+                      behavior: 'smooth'
+                    });
+                  }
+                }
+              }}
               className="text-foreground/70 hover:text-ministry-gold transition-colors text-sm font-medium tracking-wide relative after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-0.5 after:bg-ministry-gold after:scale-x-0 hover:after:scale-x-100 after:transition-transform"
             >
               {t("nav.gallery")}
             </Link>
             <Link
-              href="/about"
+              href="/#about"
+              onClick={(e) => {
+                // If we're already on home page, scroll smoothly
+                if (window.location.pathname === '/') {
+                  e.preventDefault();
+                  const element = document.getElementById('about');
+                  if (element) {
+                    const offset = 100; // Account for fixed navbar
+                    const elementPosition = element.getBoundingClientRect().top;
+                    const offsetPosition = elementPosition + window.pageYOffset - offset;
+                    window.scrollTo({
+                      top: offsetPosition,
+                      behavior: 'smooth'
+                    });
+                  }
+                }
+              }}
               className="text-foreground/70 hover:text-ministry-gold transition-colors text-sm font-medium tracking-wide relative after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-0.5 after:bg-ministry-gold after:scale-x-0 hover:after:scale-x-100 after:transition-transform"
             >
               {t("nav.about")}
@@ -96,17 +128,53 @@ export default function Navbar() {
                 {t("nav.home")}
               </Link>
               <Link
-                href="/gallery"
+                href="/#gallery"
                 data-tour="nav-gallery"
                 className="block px-4 py-2 text-foreground/80 hover:text-foreground hover:bg-[rgba(var(--foreground),0.12)] rounded-lg transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={(e) => {
+                  setMobileMenuOpen(false);
+                  // If we're already on home page, scroll smoothly
+                  if (window.location.pathname === '/') {
+                    e.preventDefault();
+                    setTimeout(() => {
+                      const element = document.getElementById('gallery');
+                      if (element) {
+                        const offset = 100; // Account for fixed navbar
+                        const elementPosition = element.getBoundingClientRect().top;
+                        const offsetPosition = elementPosition + window.pageYOffset - offset;
+                        window.scrollTo({
+                          top: offsetPosition,
+                          behavior: 'smooth'
+                        });
+                      }
+                    }, 100);
+                  }
+                }}
               >
                 {t("nav.gallery")}
               </Link>
               <Link
-                href="/about"
+                href="/#about"
                 className="block px-4 py-2 text-foreground/80 hover:text-foreground hover:bg-[rgba(var(--foreground),0.12)] rounded-lg transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={(e) => {
+                  setMobileMenuOpen(false);
+                  // If we're already on home page, scroll smoothly
+                  if (window.location.pathname === '/') {
+                    e.preventDefault();
+                    setTimeout(() => {
+                      const element = document.getElementById('about');
+                      if (element) {
+                        const offset = 100; // Account for fixed navbar
+                        const elementPosition = element.getBoundingClientRect().top;
+                        const offsetPosition = elementPosition + window.pageYOffset - offset;
+                        window.scrollTo({
+                          top: offsetPosition,
+                          behavior: 'smooth'
+                        });
+                      }
+                    }, 100);
+                  }
+                }}
               >
                 {t("nav.about")}
               </Link>

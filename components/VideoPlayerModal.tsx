@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GalleryVideo } from "@/lib/gallery-data";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { translateVideoText } from "@/lib/video-translations";
 
 interface VideoPlayerModalProps {
   video: GalleryVideo | null;
@@ -47,6 +49,7 @@ export default function VideoPlayerModal({
   onClose,
 }: VideoPlayerModalProps) {
   const [hasError, setHasError] = useState(false);
+  const { language } = useLanguage();
 
   useEffect(() => {
     if (isOpen) {
@@ -61,6 +64,20 @@ export default function VideoPlayerModal({
   }, [isOpen]);
 
   if (!video) return null;
+
+  const pick = (base?: string, localized?: Record<string, string>) =>
+    (localized && localized[language]) || base || "";
+
+  // Get base values (with localized fallback if available)
+  const baseTitle = pick(video.title, video.titleLocalized);
+  const baseDescription = pick(video.description, video.descriptionLocalized);
+  const preacher = pick(video.preacher, video.preacherLocalized);
+  const guest = pick(video.guest, video.guestLocalized);
+  const date = pick(video.date, video.dateLocalized);
+
+  // Apply automatic translations if no localized data exists
+  const title = video.titleLocalized ? baseTitle : translateVideoText(baseTitle, language);
+  const description = video.descriptionLocalized ? baseDescription : translateVideoText(baseDescription, language);
 
   return (
     <AnimatePresence>
@@ -88,16 +105,16 @@ export default function VideoPlayerModal({
               <div className="flex items-start justify-between p-3 sm:p-4 border-b border-ministry-gold/30 flex-shrink-0 relative">
                 <div className="flex-1 pr-2 min-w-0">
                   <h2 className="font-serif text-base sm:text-xl md:text-2xl font-bold text-foreground line-clamp-2">
-                    {video.title}
+                    {title}
                   </h2>
-                  {video.preacher && (
+                  {preacher && (
                     <p className="text-ministry-gold text-xs sm:text-sm mt-1 font-medium line-clamp-1">
-                      {video.preacher}
+                      {preacher}
                     </p>
                   )}
-                  {video.guest && (
+                  {guest && (
                     <p className="text-ministry-gold text-xs sm:text-sm mt-1 font-medium line-clamp-1">
-                      Guest: {video.guest}
+                      Guest: {guest}
                     </p>
                   )}
                 </div>
@@ -168,14 +185,14 @@ export default function VideoPlayerModal({
               </div>
 
               {/* Video Info */}
-              {video.description && (
+              {description && (
                 <div className="p-3 sm:p-4 md:p-6 border-t border-ministry-gold/30 overflow-y-auto flex-shrink">
                   <h3 className="font-bold text-foreground mb-2 uppercase tracking-widest text-xs">Description</h3>
                   <p className="text-foreground/70 text-xs sm:text-sm leading-relaxed">
-                    {video.description}
+                    {description}
                   </p>
                   <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-3 sm:mt-4 text-xs font-bold uppercase tracking-widest text-ministry-gold/80">
-                    <span>{video.date}</span>
+                    <span>{date}</span>
                     {video.duration && <span>Duration: {video.duration}</span>}
                     {video.views && (
                       <span>{video.views.toLocaleString()} views</span>

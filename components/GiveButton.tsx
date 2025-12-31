@@ -4,9 +4,11 @@ import { useState } from "react";
 import { CreditCard } from "lucide-react";
 import { motion } from "framer-motion";
 import DonationWidget from "./DonationWidget";
+import { useI18n } from "@/lib/i18n";
 
 export default function GiveButton() {
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useI18n();
 
   return (
     <>
@@ -18,8 +20,8 @@ export default function GiveButton() {
         onClick={() => setIsOpen(true)}
       >
         <CreditCard className="w-4 h-4 md:w-5 md:h-5" />
-        <span className="hidden sm:inline">Give</span>
-        <span className="sm:hidden">Give</span>
+        <span className="hidden sm:inline">{t("donation.giveShort")}</span>
+        <span className="sm:hidden">{t("donation.giveShort")}</span>
       </motion.button>
       
       {/* Render DonationWidget modal without button */}

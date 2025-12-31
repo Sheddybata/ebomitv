@@ -34,21 +34,21 @@ export function generateWeeklySchedule(): TVProgram[] {
   // If no videos, return empty
   if (sortedVideos.length === 0) return schedule;
 
-  // Limit to only 20 videos for the program guide
-  const programVideos = sortedVideos.slice(0, 20);
+  // Use all videos for the program guide (no limit)
+  const programVideos = sortedVideos;
 
-  // For each of 7 days, show exactly 20 videos (one of each)
+  // For each of 7 days, show all videos
   for (let day = 0; day < 7; day++) {
     const dayStart = new Date(now);
     dayStart.setHours(0, 0, 0, 0);
     dayStart.setDate(now.getDate() + day);
 
-    // Calculate total duration of all 20 videos
+    // Calculate total duration of all videos
     const totalDuration = programVideos.reduce((sum, video) => {
       return sum + minutesForVideo(video.title, video.category);
     }, 0);
 
-    // Calculate spacing to distribute 20 videos evenly across 24 hours
+    // Calculate spacing to distribute videos evenly across 24 hours
     // If total duration is less than 24 hours, space them evenly
     // If total duration is more than 24 hours, they'll overlap (which is fine)
     const availableMinutes = 24 * 60;
@@ -56,7 +56,7 @@ export function generateWeeklySchedule(): TVProgram[] {
     
     let minutesUsed = 0;
 
-    // Create exactly 20 programs, one for each video
+    // Create programs, one for each video
     programVideos.forEach((video, videoIndex) => {
       const durationMin = minutesForVideo(video.title, video.category);
       const start = new Date(dayStart.getTime() + minutesUsed * 60 * 1000);

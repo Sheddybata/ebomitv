@@ -121,7 +121,6 @@ export default function TVGuide() {
 
   const dayPrograms = getProgramsForDay(schedule, selectedDate);
   
-  // Limit to only 20 unique videos per day
   // Remove duplicates by video ID and keep only the first occurrence of each
   const uniqueVideoIds = new Set<string>();
   const limitedPrograms = dayPrograms.filter((program) => {
@@ -136,7 +135,7 @@ export default function TVGuide() {
       return false;
     }
     return true; // Keep if ID format is unexpected
-  }).slice(0, 20); // Ensure maximum of 20 programs
+  }); // Show all unique videos (no limit)
   
   const nextProgram = getNextProgram(limitedPrograms);
   const programRowMap = calculateRows(limitedPrograms);
@@ -313,25 +312,7 @@ export default function TVGuide() {
 
       {/* Timeline View */}
       <div className="relative">
-        {/* Time Labels */}
-        <div className={`flex justify-between ${isMobile ? 'mb-2' : 'mb-3'} ${isMobile ? 'px-1' : 'px-2'}`}>
-          {hours.filter((h) => h % 3 === 0).map((hour) => {
-            const date = new Date();
-            date.setHours(hour, 0, 0, 0);
-            const time12h = date.toLocaleTimeString("en-US", {
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: true,
-            });
-            return (
-              <span key={hour} className={`text-foreground/70 ${isMobile ? 'text-[10px]' : 'text-xs'} font-medium`}>
-                {time12h}
-              </span>
-            );
-          })}
-        </div>
-
-        {/* Timeline Container */}
+        {/* Timeline Container with synchronized scrolling */}
         <div
           ref={scrollContainerRef}
           className="relative overflow-x-auto pb-4"
@@ -341,6 +322,29 @@ export default function TVGuide() {
             width: "100%"
           }}
         >
+          {/* Time Labels - Positioned to match hour markers, scrolls with timeline */}
+          <div className={`relative ${isMobile ? 'mb-2' : 'mb-3'} ${isMobile ? 'px-1' : 'px-2'}`} style={{ width: '2400px', minHeight: '20px' }}>
+            {hours.filter((h) => h % 3 === 0).map((hour) => {
+              const date = new Date();
+              date.setHours(hour, 0, 0, 0);
+              const time12h = date.toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              });
+              // Position labels to match hour markers: hour 0 = 0px, hour 3 = 300px, etc. (100px per hour)
+              const labelPosition = (hour / 24) * 2400;
+              return (
+                <span 
+                  key={hour} 
+                  className={`absolute text-foreground/70 ${isMobile ? 'text-[10px]' : 'text-xs'} font-medium`}
+                  style={{ left: `${labelPosition}px`, transform: 'translateX(-50%)' }}
+                >
+                  {time12h}
+                </span>
+              );
+            })}
+          </div>
           <div 
             ref={timelineRef} 
             className="relative"
@@ -352,21 +356,25 @@ export default function TVGuide() {
               height: `${Math.max(isMobile ? 140 : 200, topOffset + cardHeight + (isMobile ? 10 : 20))}px` // Reduced bottom spacing on mobile
             }}
           >
-            {/* Hour Markers - simplified for 20 video layout */}
-            {hours.filter((h) => h % 3 === 0).map((hour) => (
-              <div
-                key={hour}
-                className="absolute border-l border-[rgba(var(--foreground),0.15)]"
-                style={{ 
-                  left: `${(hour / 24) * 100}%`,
-                  top: `${topOffset}px`,
-                  height: `${cardHeight + 10}px`
-                }}
-              />
-            ))}
+            {/* Hour Markers - Positioned to match timeline width (2400px = 100px per hour) */}
+            {hours.filter((h) => h % 3 === 0).map((hour) => {
+              // Position markers at exact pixel positions: hour 0 = 0px, hour 3 = 300px, etc.
+              const markerPosition = (hour / 24) * 2400;
+              return (
+                <div
+                  key={hour}
+                  className="absolute border-l border-[rgba(var(--foreground),0.15)]"
+                  style={{ 
+                    left: `${markerPosition}px`,
+                    top: `${topOffset}px`,
+                    height: `${cardHeight + 10}px`
+                  }}
+                />
+              );
+            })}
 
             {/* Program Blocks - Positioned based on scheduled time with gaps between them */}
-            {limitedPrograms.slice(0, 20).map((program, index) => {
+            {limitedPrograms.map((program, index) => {
               const position = getProgramPosition(program);
               const isCurrent = isProgramCurrent(program);
               const row = 0; // All cards in one row for simplicity

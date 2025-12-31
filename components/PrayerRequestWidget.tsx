@@ -2,10 +2,13 @@
 
 import { Heart } from "lucide-react";
 import { motion } from "framer-motion";
+import { useI18n } from "@/lib/i18n";
 
 export default function PrayerRequestWidget() {
+  const { t } = useI18n();
+
   const handleWhatsAppRedirect = () => {
-    const message = "I want to request for Prayers, Please can I share my Prayer request here?";
+    const message = t("prayer.requestMessage");
     const whatsappUrl = `https://wa.me/2348082538837?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };
@@ -21,8 +24,8 @@ export default function PrayerRequestWidget() {
         onClick={handleWhatsAppRedirect}
       >
         <Heart className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" />
-        <span className="hidden sm:inline">Prayer Request</span>
-        <span className="sm:hidden">Prayer</span>
+        <span className="hidden sm:inline">{t("prayer.request")}</span>
+        <span className="sm:hidden">{t("prayer.requestShort")}</span>
       </motion.button>
 
     </>
