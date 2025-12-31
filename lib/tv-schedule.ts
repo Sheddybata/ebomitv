@@ -19,7 +19,7 @@ const minutesForVideo = (title: string, category: string): number => {
 };
 
 // Generate a rolling 7-day schedule from gallery videos (continuous loop)
-// Only uses the first 12 videos and loops them
+// Only uses the first 20 videos and loops them
 export function generateWeeklySchedule(): TVProgram[] {
   const schedule: TVProgram[] = [];
   const now = new Date();
@@ -34,21 +34,21 @@ export function generateWeeklySchedule(): TVProgram[] {
   // If no videos, return empty
   if (sortedVideos.length === 0) return schedule;
 
-  // Limit to only 12 videos for the program guide
-  const programVideos = sortedVideos.slice(0, 12);
+  // Limit to only 20 videos for the program guide
+  const programVideos = sortedVideos.slice(0, 20);
 
-  // For each of 7 days, show exactly 12 videos (one of each)
+  // For each of 7 days, show exactly 20 videos (one of each)
   for (let day = 0; day < 7; day++) {
     const dayStart = new Date(now);
     dayStart.setHours(0, 0, 0, 0);
     dayStart.setDate(now.getDate() + day);
 
-    // Calculate total duration of all 12 videos
+    // Calculate total duration of all 20 videos
     const totalDuration = programVideos.reduce((sum, video) => {
       return sum + minutesForVideo(video.title, video.category);
     }, 0);
 
-    // Calculate spacing to distribute 12 videos evenly across 24 hours
+    // Calculate spacing to distribute 20 videos evenly across 24 hours
     // If total duration is less than 24 hours, space them evenly
     // If total duration is more than 24 hours, they'll overlap (which is fine)
     const availableMinutes = 24 * 60;
@@ -56,7 +56,7 @@ export function generateWeeklySchedule(): TVProgram[] {
     
     let minutesUsed = 0;
 
-    // Create exactly 12 programs, one for each video
+    // Create exactly 20 programs, one for each video
     programVideos.forEach((video, videoIndex) => {
       const durationMin = minutesForVideo(video.title, video.category);
       const start = new Date(dayStart.getTime() + minutesUsed * 60 * 1000);

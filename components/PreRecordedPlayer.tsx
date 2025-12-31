@@ -40,27 +40,12 @@ export default function PreRecordedPlayer({
   const localizedTitle = currentVideo.titleLocalized?.[language] || currentVideo.title;
 
   // Function to try a different video when current one fails
+  // DISABLED: Don't auto-switch videos - let the parent component (LiveStream) handle schedule-based switching
   const tryDifferentVideo = () => {
-    if (retryCount < 5) { // Try up to 5 different videos
-      const currentIndex = PRERECORDED_PLAYLIST.findIndex((c) => c.id === currentVideo.id);
-      const nextIndex = (currentIndex + 1) % PRERECORDED_PLAYLIST.length;
-      const nextVideo = PRERECORDED_PLAYLIST[nextIndex];
-
-      console.log(`Video failed, trying different video: ${nextVideo.title}`);
-      setCurrentVideo(nextVideo);
-      setRetryCount(retryCount + 1);
-      setHasError(false);
-      setHasLoaded(false);
-      
-      // Clear any existing error check timeout
-      if (errorCheckTimeout) {
-        clearTimeout(errorCheckTimeout);
-        setErrorCheckTimeout(null);
-      }
-    } else {
-      // After 5 retries, show error state
-      setHasError(true);
-    }
+    // Don't automatically switch videos - this causes mismatches with the program guide
+    // The parent LiveStream component will handle switching based on the schedule
+    console.log(`Video failed for: ${currentVideo.title}. Waiting for parent to handle schedule-based switching.`);
+    setHasError(true);
   };
 
   useEffect(() => {
@@ -272,56 +257,9 @@ export default function PreRecordedPlayer({
               // Mark as loaded successfully
               setHasLoaded(true);
 
-              // For YouTube videos, check for error messages after a delay
-              // YouTube embeds show "Video unavailable" error inside the iframe
-              // We can't directly access iframe content due to CORS, but we can detect
-              // if the iframe loads but doesn't show proper content
-              if (embedSrc.includes('youtube.com')) {
-                const timeout = setTimeout(() => {
-                  // If YouTube video might have failed, try a different video
-                  // This is a heuristic - if we haven't confirmed success after 8 seconds,
-                  // assume the video might be unavailable
-                  if (!hasError && retryCount < 3) {
-                    console.log(`YouTube video may be unavailable, trying different video: ${currentVideo.title}`);
-                    tryDifferentVideo();
-                  }
-                }, 8000);
-                setErrorCheckTimeout(timeout);
-              }
-
-              // Check if the iframe content indicates an error after a longer delay
-              // Facebook videos take time to load, so we wait before checking for errors
-              const facebookTimeout = setTimeout(() => {
-                try {
-                  const iframe = iframeRef.current;
-                  if (iframe && !hasError && embedSrc.includes('facebook.com')) {
-                    // Listen for messages from the iframe (Facebook sends error messages)
-                    const handleMessage = (event: MessageEvent) => {
-                      if (event.origin.includes('facebook.com') &&
-                          event.data?.type === 'error' &&
-                          retryCount < 3 &&
-                          !hasError) {
-                        console.log(`Facebook error message received for: ${currentVideo.title}`);
-                        tryDifferentVideo();
-                      }
-                    };
-
-                    window.addEventListener('message', handleMessage);
-
-                    // Clean up listener after a timeout
-                    setTimeout(() => {
-                      window.removeEventListener('message', handleMessage);
-                    }, 3000);
-                  }
-                } catch (e) {
-                  // Ignore errors in iframe communication
-                }
-              }, 5000);
-              
-              // Store timeout for cleanup
-              if (!embedSrc.includes('youtube.com')) {
-                setErrorCheckTimeout(facebookTimeout);
-              }
+              // Don't auto-switch videos on error - let the parent LiveStream component
+              // handle schedule-based switching. This prevents YouTube videos from
+              // switching to Facebook videos and keeps the program guide in sync.
             }}
           />
           {/* Facebook Attribution - Required by Facebook's Terms */}

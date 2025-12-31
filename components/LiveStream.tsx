@@ -99,14 +99,16 @@ export default function LiveStream({ onStreamStatusChange, skipIntro = false }: 
         if (content) {
           setCurrentProgram({ program: nextProgram, content });
         }
-      } else {
-        // Fallback to random content
-        const fallbackContent = getContentForCurrentTime();
-        setCurrentProgram({ 
-          program: null, 
-          content: fallbackContent 
-        });
-      }
+        } else {
+          // If no next program, use the first program from schedule (loop back to start of day)
+          if (currentSchedule.length > 0) {
+            const firstProgram = currentSchedule[0];
+            const content = findVideoContent(firstProgram);
+            if (content) {
+              setCurrentProgram({ program: firstProgram, content });
+            }
+          }
+        }
     }
   };
   

@@ -37,10 +37,10 @@ export default function TVGuide() {
     setSchedule(weeklySchedule);
     setCurrentTime(new Date());
 
-    // Update current time every minute (but don't regenerate schedule)
+    // Update current time every 10 seconds for more accurate current program detection
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 60000);
+    }, 10000);
 
     return () => clearInterval(timer);
   }, []);
@@ -121,7 +121,7 @@ export default function TVGuide() {
 
   const dayPrograms = getProgramsForDay(schedule, selectedDate);
   
-  // Limit to only 12 unique videos per day
+  // Limit to only 20 unique videos per day
   // Remove duplicates by video ID and keep only the first occurrence of each
   const uniqueVideoIds = new Set<string>();
   const limitedPrograms = dayPrograms.filter((program) => {
@@ -136,7 +136,7 @@ export default function TVGuide() {
       return false;
     }
     return true; // Keep if ID format is unexpected
-  }).slice(0, 12); // Ensure maximum of 12 programs
+  }).slice(0, 20); // Ensure maximum of 20 programs
   
   const nextProgram = getNextProgram(limitedPrograms);
   const programRowMap = calculateRows(limitedPrograms);
@@ -147,9 +147,9 @@ export default function TVGuide() {
     : 0;
   
   // Calculate card dimensions for consistent use
-  const cardHeight = isMobile ? 90 : 130;
+  const cardHeight = isMobile ? 120 : 130; // Increased from 90 to 120 for better mobile visibility
   const cardSpacing = isMobile ? 80 : 150;
-  const topOffset = isMobile ? 20 : 40;
+  const topOffset = isMobile ? 10 : 40; // Reduced from 20 to 10 to reduce white space
   
   // Calculate hour marker height based on program rows
   const hourMarkerHeight = topOffset + (maxRow + 1) * (cardHeight + cardSpacing) - cardSpacing;
@@ -184,24 +184,44 @@ export default function TVGuide() {
   // Generate 24-hour timeline
   const hours = Array.from({ length: 24 }, (_, i) => i);
 
-  // Calculate program width and position - simple even distribution for 12 videos with visible spacing
-  const getProgramPosition = (index: number, totalPrograms: number) => {
-    if (totalPrograms === 0) {
-      return { left: '0%', width: '0%' };
-    }
-
-    // Calculate spacing: use 2% of total width as spacing between each card
-    const spacingPercent = 2; // 2% spacing between cards
-    const totalSpacing = spacingPercent * (totalPrograms - 1); // Spacing between cards
-    const availableWidth = 100 - totalSpacing;
-    const cardWidthPercent = availableWidth / totalPrograms;
+  // Calculate program width and position based on actual scheduled time
+  const getProgramPosition = (program: TVProgram) => {
+    const dayStart = startOfDay(selectedDate);
+    const timelineWidth = 2400; // Fixed width: 100px per hour (24 hours = 2400px)
+    const dayDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
     
-    // Position each card with spacing: card position = (index * card width) + (index * spacing)
-    const leftPercent = (index * cardWidthPercent) + (index * spacingPercent);
+    const programStart = new Date(program.startTime);
+    const programEnd = new Date(program.endTime);
+    
+    // Normalize program times to the selected day
+    const programStartOfDay = new Date(dayStart);
+    programStartOfDay.setHours(programStart.getHours(), programStart.getMinutes(), programStart.getSeconds());
+    
+    const programEndOfDay = new Date(dayStart);
+    programEndOfDay.setHours(programEnd.getHours(), programEnd.getMinutes(), programEnd.getSeconds());
+    
+    // Calculate position in milliseconds from start of day
+    const startOffset = Math.max(0, programStartOfDay.getTime() - dayStart.getTime());
+    const endOffset = Math.max(0, programEndOfDay.getTime() - dayStart.getTime());
+    const duration = endOffset - startOffset;
+    
+    // Convert to pixels based on timeline width
+    const leftPx = (startOffset / dayDuration) * timelineWidth;
+    const widthPx = (duration / dayDuration) * timelineWidth;
+    
+    // Minimum card width for visibility
+    const minCardWidth = isMobile ? 160 : 180; // Increased from 140 to 160 for better mobile visibility
+    const finalWidth = Math.max(widthPx, minCardWidth);
+    
+    // Gap between cards: 10% of minimum card width
+    const gapPx = Math.round(minCardWidth * 0.10);
+    
+    // Adjust width to account for gap (reduce width slightly to create visible gap)
+    const adjustedWidth = Math.max(finalWidth - gapPx, minCardWidth * 0.8);
 
     return { 
-      left: `${leftPercent}%`, 
-      width: `${cardWidthPercent}%` 
+      left: `${leftPx}px`, 
+      width: `${adjustedWidth}px`
     };
   };
 
@@ -212,7 +232,9 @@ export default function TVGuide() {
     
     // Check if current time falls within program time range
     // Use getTime() for accurate comparison
-    return now.getTime() >= programStart.getTime() && now.getTime() < programEnd.getTime();
+    // Allow a small tolerance (1 second) for timing precision
+    const tolerance = 1000; // 1 second
+    return (now.getTime() + tolerance) >= programStart.getTime() && (now.getTime() - tolerance) < programEnd.getTime();
   };
 
   const currentTimePercent = () => {
@@ -251,7 +273,7 @@ export default function TVGuide() {
   };
 
   return (
-    <div className="glass rounded-lg p-4 md:p-6 shadow-lg" data-schedule>
+    <div className={`glass rounded-lg ${isMobile ? 'p-3' : 'p-4 md:p-6'} shadow-lg`} data-schedule>
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
@@ -292,7 +314,7 @@ export default function TVGuide() {
       {/* Timeline View */}
       <div className="relative">
         {/* Time Labels */}
-        <div className="flex justify-between mb-3 px-2">
+        <div className={`flex justify-between ${isMobile ? 'mb-2' : 'mb-3'} ${isMobile ? 'px-1' : 'px-2'}`}>
           {hours.filter((h) => h % 3 === 0).map((hour) => {
             const date = new Date();
             date.setHours(hour, 0, 0, 0);
@@ -302,7 +324,7 @@ export default function TVGuide() {
               hour12: true,
             });
             return (
-              <span key={hour} className="text-foreground/70 text-xs font-medium">
+              <span key={hour} className={`text-foreground/70 ${isMobile ? 'text-[10px]' : 'text-xs'} font-medium`}>
                 {time12h}
               </span>
             );
@@ -322,14 +344,15 @@ export default function TVGuide() {
           <div 
             ref={timelineRef} 
             className="relative"
-            style={{ 
-              width: '100%',
-              minHeight: '200px',
-              paddingRight: isMobile ? '16px' : '32px',
-              height: `${Math.max(200, topOffset + cardHeight + 20)}px`
+              style={{ 
+              width: '2400px', // Wide enough for 24-hour timeline (100px per hour)
+              minHeight: isMobile ? '140px' : '200px', // Reduced min height on mobile
+              paddingRight: isMobile ? '8px' : '32px', // Reduced padding on mobile
+              paddingLeft: isMobile ? '4px' : '16px', // Reduced padding on mobile
+              height: `${Math.max(isMobile ? 140 : 200, topOffset + cardHeight + (isMobile ? 10 : 20))}px` // Reduced bottom spacing on mobile
             }}
           >
-            {/* Hour Markers - simplified for 12 video layout */}
+            {/* Hour Markers - simplified for 20 video layout */}
             {hours.filter((h) => h % 3 === 0).map((hour) => (
               <div
                 key={hour}
@@ -342,9 +365,9 @@ export default function TVGuide() {
               />
             ))}
 
-            {/* Program Blocks - Simple even distribution for 12 videos */}
-            {limitedPrograms.slice(0, 12).map((program, index) => {
-              const position = getProgramPosition(index, Math.min(limitedPrograms.length, 12));
+            {/* Program Blocks - Positioned based on scheduled time with gaps between them */}
+            {limitedPrograms.slice(0, 20).map((program, index) => {
+              const position = getProgramPosition(program);
               const isCurrent = isProgramCurrent(program);
               const row = 0; // All cards in one row for simplicity
               const topPx = topOffset;
@@ -355,20 +378,20 @@ export default function TVGuide() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   onClick={() => handleCardClick(program)}
-                  className={`absolute rounded-lg p-2 sm:p-3 md:p-4 cursor-pointer hover:scale-[1.03] active:scale-[0.97] transition-all border-2 shadow-lg touch-manipulation ${
+                  className={`absolute rounded-lg ${isMobile ? 'p-1.5' : 'p-2 sm:p-3 md:p-4'} cursor-pointer hover:scale-[1.03] active:scale-[0.97] transition-all border-2 shadow-lg touch-manipulation ${
                     isCurrent
-                      ? "bg-white dark:bg-neutral-800 border-blue-500/50 shadow-xl z-10"
+                      ? "bg-white dark:bg-neutral-800 border-blue-400/60 z-10"
                       : "bg-white/95 dark:bg-neutral-800/95 border-gray-200 dark:border-neutral-600 hover:border-ministry-gold hover:shadow-xl z-0"
                   }`}
                   style={{
                     left: position.left,
                     width: position.width,
-                    minWidth: isMobile ? "120px" : "150px",
                     top: `${topPx}px`,
                     height: `${cardHeight}px`,
+                    opacity: isCurrent ? 1 : 1, // Current program: 0% transparency (fully opaque)
                     ...(isCurrent ? {
-                      boxShadow: '0 0 20px rgba(59, 130, 246, 0.6), 0 0 40px rgba(59, 130, 246, 0.4), 0 0 60px rgba(59, 130, 246, 0.2), 0 4px 12px rgba(59, 130, 246, 0.3)',
-                      borderColor: 'rgba(59, 130, 246, 0.5)',
+                      boxShadow: '0 4px 20px rgba(59, 130, 246, 0.3), 0 8px 30px rgba(59, 130, 246, 0.2), 0 2px 8px rgba(59, 130, 246, 0.15)', // Soft blue shadow
+                      borderColor: 'rgba(59, 130, 246, 0.4)',
                     } : {}),
                   }}
                 >
@@ -381,22 +404,18 @@ export default function TVGuide() {
                       />
                     </div>
                   )}
-                  {/* Blue overlay for current program */}
-                  {isCurrent && (
-                    <div className="absolute inset-0 rounded-md bg-blue-500/15 pointer-events-none" />
-                  )}
-                  <div className="relative z-10 h-full flex flex-col justify-between rounded-md p-1 sm:p-1.5 md:p-2">
+                  <div className={`relative z-10 h-full flex flex-col justify-between rounded-md ${isMobile ? 'p-1.5' : 'p-1 sm:p-1.5 md:p-2'}`}>
                     {/* Category badge at top left */}
                     <div className="flex-shrink-0">
                       <span
-                        className={`inline-block px-1 sm:px-1.5 py-0.5 ${getProgramTypeColor(program.type)} text-white text-[7px] sm:text-[8px] md:text-[9px] font-bold rounded shadow-sm`}
+                        className={`inline-block ${isMobile ? 'px-1.5 py-0.5 text-[9px]' : 'px-1 sm:px-1.5 py-0.5 text-[7px] sm:text-[8px] md:text-[9px]'} ${getProgramTypeColor(program.type)} text-white font-bold rounded shadow-sm`}
                       >
                         {program.type}
                       </span>
                     </div>
                     {/* Title at bottom left */}
                     <div className="flex-shrink-0 mt-auto">
-                      <h4 className="font-semibold text-gray-900 dark:text-white text-[10px] sm:text-xs md:text-sm line-clamp-2 leading-tight sm:leading-snug drop-shadow-sm text-left">
+                      <h4 className={`font-semibold text-gray-900 dark:text-white ${isMobile ? 'text-xs' : 'text-[10px] sm:text-xs md:text-sm'} line-clamp-2 ${isMobile ? 'leading-snug' : 'leading-tight sm:leading-snug'} drop-shadow-sm text-left`}>
                         {pick(program.title, program.titleLocalized)}
                       </h4>
                     </div>
@@ -409,19 +428,19 @@ export default function TVGuide() {
       </div>
 
       {/* Next Program Info */}
-      <div className="mt-6">
+      <div className={isMobile ? "mt-4" : "mt-6"}>
         {nextProgram && (
-          <div className="p-4 bg-[rgba(var(--foreground),0.08)] border border-[rgba(var(--foreground),0.15)] rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4 text-ministry-gold" />
-              <span className="text-ministry-gold font-semibold text-sm">
+          <div className={`${isMobile ? 'p-3' : 'p-4'} bg-[rgba(var(--foreground),0.08)] border border-[rgba(var(--foreground),0.15)] rounded-lg`}>
+            <div className={`flex items-center gap-2 ${isMobile ? 'mb-1.5' : 'mb-2'}`}>
+              <Clock className={`${isMobile ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-ministry-gold`} />
+              <span className={`text-ministry-gold font-semibold ${isMobile ? 'text-xs' : 'text-sm'}`}>
                 {t("tv.upNext")}: {getTimeUntil(nextProgram)}
               </span>
             </div>
-            <h5 className="font-serif font-bold text-foreground mb-1">
+            <h5 className={`font-serif font-bold text-foreground ${isMobile ? 'text-sm mb-0.5' : 'mb-1'}`}>
               {pick(nextProgram.title, nextProgram.titleLocalized)}
             </h5>
-            <p className="text-foreground/70 text-sm">
+            <p className={`text-foreground/70 ${isMobile ? 'text-xs' : 'text-sm'}`}>
               {formatProgramTime(nextProgram.startTime)} -{" "}
               {formatProgramTime(nextProgram.endTime)}
             </p>
