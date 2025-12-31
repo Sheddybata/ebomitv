@@ -72,6 +72,7 @@ export default function MuxLivePlayer({
   const [isLive, setIsLive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasAttemptedPlay, setHasAttemptedPlay] = useState(false);
 
   // Check stream status periodically
   useEffect(() => {
@@ -129,6 +130,8 @@ export default function MuxLivePlayer({
           preload="auto"
           onPlay={() => {
             setIsLive(true);
+            setHasAttemptedPlay(true);
+            setError(null); // Clear error when stream plays successfully
             onStreamStatusChange?.(true);
           }}
           onPause={() => {
@@ -138,9 +141,13 @@ export default function MuxLivePlayer({
           onError={(error: Error) => {
             console.error("Mux player error:", error);
             // Don't set error for analytics-related errors
+            // Don't show error when there's no livestream available - just silently handle it
+            // The LiveStream component will show pre-recorded content instead
             if (!error?.message?.includes('ERR_BLOCKED_BY_CLIENT') &&
                 !error?.message?.includes('litix.io')) {
-              setError("Failed to load stream");
+              // Only log the error, don't display it to users
+              // When there's no stream, pre-recorded content will be shown instead
+              console.warn("Stream not available, will use pre-recorded content");
             }
             setIsLive(false);
             onStreamStatusChange?.(false);
@@ -160,16 +167,8 @@ export default function MuxLivePlayer({
           </div>
         )}
 
-        {/* Error Message - Only show real errors, not analytics blocks */}
-        {error && !error.includes('ERR_BLOCKED_BY_CLIENT') && !error.includes('litix.io') && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-            <div className="text-center">
-              <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <p className="text-white text-lg mb-2">Stream Error</p>
-              <p className="text-white/70 text-sm">{error}</p>
-            </div>
-          </div>
-        )}
+        {/* Error Message - Hidden when there's no livestream available */}
+        {/* Error display removed - when there's no stream, pre-recorded content will show instead */}
       </div>
 
     </div>
