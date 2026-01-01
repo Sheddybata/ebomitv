@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Search, X, Play, Hand } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import LiveStream from "@/components/LiveStream";
+import HomeStreamPlayer from "@/components/HomeStreamPlayer";
 import TVGuide from "@/components/TVGuide";
 import LiveChat from "@/components/LiveChat";
 import DonationWidget from "@/components/DonationWidget";
@@ -28,7 +28,6 @@ import {
   GalleryVideo,
 } from "@/lib/gallery-data";
 import Link from "next/link";
-import { Radio } from "lucide-react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 
@@ -123,23 +122,14 @@ export default function Home() {
               <p className="text-foreground/70 text-sm md:text-lg">
                 {t("home.subtitle")}
               </p>
-              <div className="mt-3">
-                <Link
-                  href="/live"
-                  className="inline-flex items-center gap-2 bg-ministry-red hover:bg-ministry-red/90 text-white px-4 py-2.5 md:px-6 md:py-3 rounded-full shadow-lg font-bold text-sm md:text-base transition-colors"
-                >
-                  <Radio className="w-4 h-4 md:w-5 md:h-5" />
-                  {t("home.watchLive")}
-                </Link>
-              </div>
           </div>
 
           {/* Main Content */}
           <div id="top" className="space-y-4 md:space-y-6">
             {/* Stream Player - Full width */}
             <div className="relative">
-              <LiveStream
-                onStreamStatusChange={(status) => setIsLive(status.isLive)}
+              <HomeStreamPlayer
+                onStreamStatusChange={(isLive) => setIsLive(isLive)}
                 skipIntro={false}
               />
             </div>
