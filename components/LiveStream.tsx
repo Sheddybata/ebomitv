@@ -400,11 +400,11 @@ export default function LiveStream({ onStreamStatusChange, skipIntro = false }: 
             <iframe
               src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(
                 streamStatus.facebookUrl
-              )}&show_text=false&width=100%&height=100%&autoplay=false&allowfullscreen=false`}
+              )}&show_text=false&width=100%&height=100%&autoplay=true&allowfullscreen=false`}
               className="w-full h-full"
               loading="lazy"
               title="Facebook Live"
-              allow="clipboard-write; encrypted-media; picture-in-picture; web-share"
+              allow="clipboard-write; encrypted-media; picture-in-picture; web-share; autoplay"
               style={{ border: "none", overflow: "hidden" }}
               scrolling="no"
             />
@@ -422,11 +422,11 @@ export default function LiveStream({ onStreamStatusChange, skipIntro = false }: 
           >
             {/* YouTube Live Embed */}
             <iframe
-              src={`https://www.youtube.com/embed/${streamStatus.youtubeVideoId}?autoplay=0&controls=1&rel=0&modestbranding=1&playsinline=1&fs=0&enablejsapi=1`}
+              src={`https://www.youtube.com/embed/${streamStatus.youtubeVideoId}?autoplay=1&controls=1&rel=0&modestbranding=1&playsinline=1&fs=0&enablejsapi=1`}
               className="w-full h-full"
               loading="lazy"
               title="YouTube Live"
-              allow="encrypted-media; picture-in-picture; web-share"
+              allow="encrypted-media; picture-in-picture; web-share; autoplay"
               style={{ border: "none" }}
               onLoad={() => {
                 // Set a timeout to check if YouTube video is unavailable
