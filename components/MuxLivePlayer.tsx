@@ -128,6 +128,7 @@ export default function MuxLivePlayer({
           muted={autoPlay ? false : false}
           playsInline
           preload="auto"
+          maxResolution="720p"
           onPlay={() => {
             setIsLive(true);
             setHasAttemptedPlay(true);
