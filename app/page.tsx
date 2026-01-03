@@ -6,7 +6,6 @@ import Navbar from "@/components/Navbar";
 import HomeStreamPlayer from "@/components/HomeStreamPlayer";
 import TVGuide from "@/components/TVGuide";
 import LiveChat from "@/components/LiveChat";
-import DonationWidget from "@/components/DonationWidget";
 import PrayerRequestWidget from "@/components/PrayerRequestWidget";
 import GiveButton from "@/components/GiveButton";
 import LanguageSelector from "@/components/LanguageSelector";
@@ -550,9 +549,6 @@ export default function Home() {
 
       {/* Section Navigator - Up/Down arrows */}
       <SectionNavigator />
-      
-      {/* Donation Widget (for live streams, shown on right) */}
-      {isLive && <DonationWidget isLive={isLive} />}
 
       {/* Video Player Modal */}
       <VideoPlayerModal
