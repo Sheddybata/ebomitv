@@ -14,7 +14,8 @@ import {
 } from "@/lib/tv-schedule";
 import { format, isToday, addDays, subDays, startOfDay } from "date-fns";
 import VideoPlayerModal from "./VideoPlayerModal";
-import { GALLERY_VIDEOS, GalleryVideo } from "@/lib/gallery-data";
+import { GALLERY_VIDEOS, GalleryVideo, getFeaturedVideos } from "@/lib/gallery-data";
+import VideoCard from "./VideoCard";
 
 export default function TVGuide() {
   const [schedule, setSchedule] = useState<TVProgram[]>([]);
@@ -309,6 +310,24 @@ export default function TVGuide() {
           </button>
         </div>
       </div>
+
+      {/* Featured Videos Section */}
+      {getFeaturedVideos().length > 0 && (
+        <div className="mb-6 md:mb-8 pb-6 md:pb-8 border-b border-[rgba(var(--foreground),0.1)]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            {getFeaturedVideos().map((video) => (
+              <VideoCard
+                key={video.id}
+                video={video}
+                onPlay={(video) => {
+                  setSelectedVideo(video);
+                  setIsModalOpen(true);
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Timeline View */}
       <div className="relative">

@@ -1,6 +1,6 @@
 "use client";
 
-import { Play, Clock, Eye, User, Mic } from "lucide-react";
+import { Play, Clock, Eye, User, Mic, Flame } from "lucide-react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { GalleryVideo } from "@/lib/gallery-data";
@@ -73,7 +73,9 @@ export default function VideoCard({ video, onPlay }: VideoCardProps) {
             src={video.thumbnail}
             alt={title || video.title}
             fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="object-cover group-hover:scale-110 transition-transform duration-500"
+            unoptimized={video.thumbnail.includes('category url')}
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -96,8 +98,9 @@ export default function VideoCard({ video, onPlay }: VideoCardProps) {
         {/* Featured Badge */}
         {video.featured && (
           <div className="absolute top-2 right-2 z-10">
-            <span className="px-2 py-1 bg-ministry-gold text-white text-[10px] font-bold rounded tracking-wider shadow-sm">
-              ⭐ FEATURED
+            <span className="flex items-center gap-1 px-2 py-1 bg-ministry-gold text-white text-[10px] font-bold rounded tracking-wider shadow-sm">
+              <Flame className="w-3 h-3 text-ministry-red fill-ministry-red" />
+              FEATURED
             </span>
           </div>
         )}

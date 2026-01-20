@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Search, X, Play, Hand } from "lucide-react";
+import { Search, X, Play, Hand, Flame } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import HomeStreamPlayer from "@/components/HomeStreamPlayer";
 import TVGuide from "@/components/TVGuide";
@@ -141,6 +141,21 @@ export default function Home() {
               <LiveChat />
             </div>
           </div>
+
+          {/* Featured Section */}
+          {getFeaturedVideos().length > 0 && (
+            <section id="featured" className="mt-16 md:mt-20 pt-16 md:pt-20 border-t border-foreground/10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
+                {getFeaturedVideos().map((video) => (
+                  <VideoCard
+                    key={video.id}
+                    video={video}
+                    onPlay={handlePlayVideo}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Gallery Section - First section after Program Guide */}
           <section id="gallery" data-tour="gallery" className="mt-16 md:mt-20 pt-16 md:pt-20 border-t border-foreground/10">

@@ -337,6 +337,17 @@ export const GALLERY_VIDEOS: GalleryVideo[] = [
     preacher: "Prophet Dr. Isa El-Buba",
     date: "15th October 2024",
   },
+  {
+    id: "yt-powerful-interview-2026",
+    title: "Powerful Interview",
+    description: "James Aladiran speaks with Prophet Isa El-Buba as he shares his life-changing testimony of encountering Jesus as a former jihadist.",
+    thumbnail: "/category url/interviews/image.jpg",
+    videoUrl: "https://www.youtube.com/embed/2oo8tvizyZA?si=jKpqsqoj3f4e3Us8",
+    category: "podcast",
+    guest: "James Aladiran & Prophet Isa El-Buba",
+    date: "2026",
+    featured: true,
+  },
 ];
 
 export function getFeaturedVideos(): GalleryVideo[] {
