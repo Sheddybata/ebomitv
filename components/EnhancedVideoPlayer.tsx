@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Play, Pause, PictureInPicture, Volume2, VolumeX } from "lucide-react";
 import { PreRecordedContent } from "@/lib/types";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -72,7 +72,7 @@ export default function EnhancedVideoPlayer({
   }, [content]);
 
   // Save playback state
-  const savePlaybackState = () => {
+  const savePlaybackState = useCallback(() => {
     if (!content || !videoRef.current) return;
 
     try {
@@ -97,7 +97,7 @@ export default function EnhancedVideoPlayer({
     } catch (error) {
       console.error("Error saving playback state:", error);
     }
-  };
+  }, [content]);
 
   // Save state periodically
   useEffect(() => {
@@ -108,7 +108,28 @@ export default function EnhancedVideoPlayer({
     }, 5000); // Save every 5 seconds
 
     return () => clearInterval(interval);
-  }, [isPlaying, content]);
+  }, [isPlaying, content, savePlaybackState]);
+
+  // Load main content
+  const loadMainContent = useCallback(() => {
+    if (!content || !videoRef.current) return;
+
+    const video = videoRef.current;
+
+    if (content.url.includes('.mp4') || content.url.includes('.webm') || content.url.includes('.m3u8')) {
+      video.src = content.url;
+      video.load();
+    } else {
+      setNetworkError(true);
+      setTimeout(() => {
+        setNetworkError(false);
+        if (videoRef.current) {
+          video.src = introVideoPath;
+          video.load();
+        }
+      }, 3000);
+    }
+  }, [content, introVideoPath]);
 
   // Handle intro video
   useEffect(() => {
@@ -121,7 +142,6 @@ export default function EnhancedVideoPlayer({
     const handleIntroEnd = () => {
       setIsIntroPlaying(false);
       setShowIntro(false);
-      // Load main content after intro
       if (content) {
         loadMainContent();
       }
@@ -129,32 +149,7 @@ export default function EnhancedVideoPlayer({
 
     video.addEventListener("ended", handleIntroEnd);
     return () => video.removeEventListener("ended", handleIntroEnd);
-  }, [showIntro, introVideoPath, content]);
-
-  // Load main content
-  const loadMainContent = () => {
-    if (!content || !videoRef.current) return;
-
-    const video = videoRef.current;
-    
-    // Convert Facebook/YouTube URLs to direct video if possible, or use iframe fallback
-    // For now, we'll use the URL directly if it's a video file, otherwise show intro as fallback
-    if (content.url.includes('.mp4') || content.url.includes('.webm') || content.url.includes('.m3u8')) {
-      video.src = content.url;
-      video.load();
-    } else {
-      // For Facebook/YouTube embeds, we'll keep showing intro or use iframe
-      setNetworkError(true);
-      // Retry loading after a delay
-      setTimeout(() => {
-        setNetworkError(false);
-        if (videoRef.current) {
-          video.src = introVideoPath;
-          video.load();
-        }
-      }, 3000);
-    }
-  };
+  }, [showIntro, introVideoPath, content, loadMainContent]);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -334,7 +329,7 @@ export default function EnhancedVideoPlayer({
       video.removeEventListener("waiting", handleWaiting);
       video.removeEventListener("playing", handlePlaying);
     };
-  }, [showIntro, onEnded, onError]);
+  }, [showIntro, onEnded, onError, savePlaybackState]);
 
   // Auto-play when ready
   useEffect(() => {

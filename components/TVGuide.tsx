@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import Image from "next/image";
 import { Calendar, Clock, Play, Search, Filter, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TVProgram } from "@/lib/types";
@@ -35,8 +36,11 @@ export default function TVGuide() {
   const { playProgram } = useProgram();
   const { lightTap, mediumTap } = useHapticFeedback();
 
-  const pick = (base?: string, localized?: Record<string, string>) =>
-    (localized && localized[language]) || base || "";
+  const pick = useCallback(
+    (base?: string, localized?: Record<string, string>) =>
+      (localized && localized[language]) || base || "",
+    [language]
+  );
 
   // Memoize schedule generation
   const weeklySchedule = useMemo(() => generateWeeklySchedule(), []);
@@ -94,7 +98,7 @@ export default function TVGuide() {
     }
 
     return programs;
-  }, [dayPrograms, searchQuery, filterType, language]);
+  }, [dayPrograms, searchQuery, filterType, pick]);
 
   // Memoize deduplication
   const limitedPrograms = useMemo(() => {
@@ -121,20 +125,18 @@ export default function TVGuide() {
   );
 
   // Find current program index in sorted list
-  const getCurrentProgramIndex = (): number => {
+  const getCurrentProgramIndex = useCallback((): number => {
     if (currentProgram) {
       return sortedPrograms.findIndex(p => p.id === currentProgram.id);
     }
-    // If no current program, find the program that should be playing now
     const now = new Date();
-    const index = sortedPrograms.findIndex(p => 
+    const index = sortedPrograms.findIndex(p =>
       now >= p.startTime && now < p.endTime
     );
     if (index >= 0) return index;
-    // If no current program, find the next upcoming program
     const nextIndex = sortedPrograms.findIndex(p => p.startTime > now);
     return nextIndex >= 0 ? nextIndex : 0;
-  };
+  }, [currentProgram, sortedPrograms]);
 
   // Get programs for navigation (sequential through all programs)
   const getPreviousProgram = (): TVProgram | null => {
@@ -164,7 +166,7 @@ export default function TVGuide() {
   const nextProgram = getNextProgramForNav();
   const currentProgramForNav = getCurrentProgramForNav();
 
-  const scrollToNow = () => {
+  const scrollToNow = useCallback(() => {
     if (scrollContainerRef.current) {
       const currentHour = currentTime.getHours();
       const scrollPosition = (currentHour / 24) * scrollContainerRef.current.scrollWidth;
@@ -174,45 +176,34 @@ export default function TVGuide() {
       });
     }
     setSelectedDate(new Date());
-  };
+  }, [currentTime]);
 
   // Scroll to and highlight a program in the timeline
-  const scrollToProgram = (program: TVProgram | null) => {
+  const scrollToProgram = useCallback((program: TVProgram | null) => {
     if (!program || !scrollContainerRef.current) return;
 
-    // Set the program's date as selected date if it's on a different day
     const programDate = new Date(program.startTime);
     const programDay = new Date(programDate.getFullYear(), programDate.getMonth(), programDate.getDate());
     const selectedDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-    
+
     if (programDay.getTime() !== selectedDay.getTime()) {
       setSelectedDate(programDate);
-      // Wait for date change to update programs, then scroll
       setTimeout(() => scrollToProgram(program), 100);
       return;
     }
 
-    // Get the program element
     const programElement = programRefs.current.get(program.id);
     if (programElement && scrollContainerRef.current) {
-      const containerRect = scrollContainerRef.current.getBoundingClientRect();
-      const programRect = programElement.getBoundingClientRect();
-      
-      // Calculate scroll position to center the program
-      const scrollLeft = scrollContainerRef.current.scrollLeft;
       const programLeft = programElement.offsetLeft;
       const programWidth = programElement.offsetWidth;
       const containerWidth = scrollContainerRef.current.offsetWidth;
-      
-      // Center the program in the viewport
       const targetScroll = programLeft - (containerWidth / 2) + (programWidth / 2);
-      
+
       scrollContainerRef.current.scrollTo({
         left: Math.max(0, targetScroll),
         behavior: "smooth",
       });
 
-      // Highlight the program
       setSelectedProgramId(program.id);
       
       // Keep highlight longer for better visibility (5 seconds)
@@ -220,7 +211,7 @@ export default function TVGuide() {
         setSelectedProgramId(null);
       }, 5000);
     }
-  };
+  }, [selectedDate]);
 
   const handlePlayPrevious = useCallback(() => {
     if (previousProgram) {
@@ -231,7 +222,7 @@ export default function TVGuide() {
       playProgram(previousProgram);
       scrollToProgram(previousProgram);
     }
-  }, [previousProgram, navigationIndex, sortedPrograms.length, getCurrentProgramIndex, playProgram, mediumTap]);
+  }, [previousProgram, navigationIndex, sortedPrograms.length, getCurrentProgramIndex, playProgram, mediumTap, scrollToProgram]);
 
   const handlePlayCurrent = useCallback(() => {
     const programToPlay = currentProgramForNav || currentProgram;
@@ -245,7 +236,7 @@ export default function TVGuide() {
       // If no current program, scroll to now
       scrollToNow();
     }
-  }, [currentProgramForNav, currentProgram, getCurrentProgramIndex, playProgram, mediumTap]);
+  }, [currentProgramForNav, currentProgram, getCurrentProgramIndex, playProgram, mediumTap, scrollToProgram, scrollToNow]);
 
   const handlePlayNext = useCallback(() => {
     if (nextProgram) {
@@ -256,7 +247,7 @@ export default function TVGuide() {
       playProgram(nextProgram);
       scrollToProgram(nextProgram);
     }
-  }, [nextProgram, navigationIndex, sortedPrograms.length, getCurrentProgramIndex, playProgram, mediumTap]);
+  }, [nextProgram, navigationIndex, sortedPrograms.length, getCurrentProgramIndex, playProgram, mediumTap, scrollToProgram]);
 
   const getProgramTypeColor = (type: TVProgram["type"]) => {
     switch (type) {
@@ -565,10 +556,12 @@ export default function TVGuide() {
                     <div
                       className={`absolute inset-0 rounded-md overflow-hidden ${isCurrent ? "opacity-100" : "opacity-40"}`}
                     >
-                      <img
+                      <Image
                         src={program.thumbnail}
                         alt={program.title}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 80px, 120px"
                       />
                     </div>
                   )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, X, Clock, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GALLERY_VIDEOS, searchVideos, GalleryVideo } from "@/lib/gallery-data";
@@ -73,16 +73,16 @@ export default function SearchOverlay({
   };
 
   // Clear search
-  const clearSearch = () => {
+  const clearSearch = useCallback(() => {
     setQuery("");
     setResults([]);
-  };
+  }, []);
 
   // Close overlay
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     clearSearch();
     onClose();
-  };
+  }, [clearSearch, onClose]);
 
   // Helper function to parse duration string (e.g., "1:30:00" or "45:00") to milliseconds
   const parseDuration = (durationStr: string): number => {
@@ -114,7 +114,7 @@ export default function SearchOverlay({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen]);
+  }, [isOpen, handleClose]);
 
   return (
     <AnimatePresence>

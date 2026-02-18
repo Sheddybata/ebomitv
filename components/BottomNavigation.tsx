@@ -48,26 +48,10 @@ export default function BottomNavigation() {
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
-
-          const handleClick = (e: React.MouseEvent) => {
-            lightTap(); // Haptic feedback
-            if (item.action) {
-              e.preventDefault();
-              item.action();
-            }
-          };
-
-          const Component = item.action ? 'button' : Link;
-          const props = item.action 
-            ? { onClick: handleClick }
-            : { href: item.href };
-
-          return (
-            <Component
-              key={item.id}
-              {...props}
-              className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors min-w-[60px]"
-            >
+          const baseClassName =
+            "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors min-w-[60px]";
+          const content = (
+            <>
               <motion.div
                 animate={{ scale: active ? 1.1 : 1 }}
                 transition={{ duration: 0.2 }}
@@ -86,7 +70,35 @@ export default function BottomNavigation() {
               >
                 {item.label}
               </span>
-            </Component>
+            </>
+          );
+
+          if (item.action) {
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={(e) => {
+                  lightTap();
+                  e.preventDefault();
+                  item.action?.();
+                }}
+                className={baseClassName}
+              >
+                {content}
+              </button>
+            );
+          }
+
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              onClick={() => lightTap()}
+              className={baseClassName}
+            >
+              {content}
+            </Link>
           );
         })}
       </div>

@@ -43,7 +43,7 @@ export default function SectionNavigator() {
     handleScroll(); // Initial check
 
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [sections.length]);
 
   const scrollToSection = (direction: "up" | "down") => {
     let targetIndex = currentSection;

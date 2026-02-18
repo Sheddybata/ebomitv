@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Video, Loader2 } from "lucide-react";
 import { StreamStatus, PreRecordedContent } from "@/lib/types";
@@ -32,7 +32,7 @@ export default function LiveStream({ onStreamStatusChange, skipIntro = false }: 
   const programEndTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Find video content from program
-  const findVideoContent = (program: any): PreRecordedContent | null => {
+  const findVideoContent = useCallback((program: any): PreRecordedContent | null => {
     // Extract video ID from program ID (format: videoId-day-index)
     const parts = program.id.split('-');
     if (parts.length >= 3) {
@@ -51,12 +51,12 @@ export default function LiveStream({ onStreamStatusChange, skipIntro = false }: 
       }
     }
     return null;
-  };
+  }, []);
 
   // Update current program based on schedule
   const updateCurrentProgramRef = useRef<() => void>(() => {});
-  
-  const updateCurrentProgram = () => {
+
+  const updateCurrentProgram = useCallback(() => {
     const now = new Date();
     const currentSchedule = generateWeeklySchedule();
     
@@ -110,11 +110,11 @@ export default function LiveStream({ onStreamStatusChange, skipIntro = false }: 
           }
         }
     }
-  };
-  
+  }, [findVideoContent, showIntro]);
+
   updateCurrentProgramRef.current = updateCurrentProgram;
 
-  async function checkStreamStatus() {
+  const checkStreamStatus = useCallback(async () => {
     try {
       const response = await fetch("/api/stream-status");
       const status: StreamStatus = await response.json();
@@ -167,7 +167,7 @@ export default function LiveStream({ onStreamStatusChange, skipIntro = false }: 
         },
       });
     }
-  }
+  }, [findVideoContent, updateCurrentProgram, onStreamStatusChange, showIntro, hasPlayedInitialIntro, skipIntro, currentProgram?.content]);
 
   // Handle intro video - only show if not skipping intro
   useEffect(() => {
@@ -269,8 +269,8 @@ export default function LiveStream({ onStreamStatusChange, skipIntro = false }: 
       video.removeEventListener("error", handleIntroError);
       video.removeEventListener("canplay", handleCanPlay);
     };
-  }, [showIntro, skipIntro]);
-  
+  }, [showIntro, skipIntro, hasPlayedInitialIntro, updateCurrentProgram, findVideoContent]);
+
   // Monitor program schedule and update current program
   useEffect(() => {
     // Check program schedule every minute
@@ -290,7 +290,7 @@ export default function LiveStream({ onStreamStatusChange, skipIntro = false }: 
         clearInterval(programCheckIntervalRef.current);
       }
     };
-  }, [streamStatus, hasPlayedInitialIntro]);
+  }, [streamStatus, hasPlayedInitialIntro, updateCurrentProgram]);
 
   useEffect(() => {
     // Check stream status immediately
@@ -329,7 +329,7 @@ export default function LiveStream({ onStreamStatusChange, skipIntro = false }: 
         clearTimeout(programEndTimeoutRef.current);
       }
     };
-  }, []);
+  }, [checkStreamStatus]);
 
   // If skipIntro is true, ensure we never show intro once we have content
   useEffect(() => {

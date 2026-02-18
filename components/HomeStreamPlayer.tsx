@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Video, Loader2 } from "lucide-react";
 import { PreRecordedContent } from "@/lib/types";
@@ -40,7 +40,7 @@ export default function HomeStreamPlayer({ onStreamStatusChange, skipIntro = fal
   const { selectedProgram, setSelectedProgram } = useProgram();
 
   // Find video content from program
-  const findVideoContent = (program: any): PreRecordedContent | null => {
+  const findVideoContent = useCallback((program: any): PreRecordedContent | null => {
     // Last resort first: if program has a direct videoUrl, use it immediately
     if (program.videoUrl) {
       return {
@@ -111,7 +111,7 @@ export default function HomeStreamPlayer({ onStreamStatusChange, skipIntro = fal
     }
     
     return null;
-  };
+  }, []);
 
   // Listen for program selection from TVGuide or Search
   useEffect(() => {
@@ -126,12 +126,12 @@ export default function HomeStreamPlayer({ onStreamStatusChange, skipIntro = fal
         }, 500);
       }
     }
-  }, [selectedProgram, isMuxLive, isLoading, setSelectedProgram]);
+  }, [selectedProgram, isMuxLive, isLoading, setSelectedProgram, findVideoContent]);
 
   // Update current program based on schedule
   const updateCurrentProgramRef = useRef<() => void>(() => {});
-  
-  const updateCurrentProgram = () => {
+
+  const updateCurrentProgram = useCallback(() => {
     const now = new Date();
     const currentSchedule = generateWeeklySchedule();
     
@@ -185,8 +185,8 @@ export default function HomeStreamPlayer({ onStreamStatusChange, skipIntro = fal
         }
       }
     }
-  };
-  
+  }, [findVideoContent, showIntro]);
+
   updateCurrentProgramRef.current = updateCurrentProgram;
 
   // Fetch active Mux live streams
@@ -270,7 +270,7 @@ export default function HomeStreamPlayer({ onStreamStatusChange, skipIntro = fal
         clearInterval(programCheckIntervalRef.current);
       }
     };
-  }, [isMuxLive, isLoading, skipIntro, hasPlayedInitialIntro]);
+  }, [isMuxLive, isLoading, skipIntro, hasPlayedInitialIntro, updateCurrentProgram]);
 
   // Handle intro video - only show if not skipping intro and not live and not loading
   useEffect(() => {
@@ -365,7 +365,7 @@ export default function HomeStreamPlayer({ onStreamStatusChange, skipIntro = fal
       video.removeEventListener("error", handleIntroError);
       video.removeEventListener("canplay", handleCanPlay);
     };
-  }, [showIntro, skipIntro, isMuxLive, isLoading, hasPlayedInitialIntro]);
+  }, [showIntro, skipIntro, isMuxLive, isLoading, hasPlayedInitialIntro, updateCurrentProgram, findVideoContent]);
 
   // If skipIntro is true, ensure we never show intro once we have content
   useEffect(() => {

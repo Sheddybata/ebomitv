@@ -121,7 +121,7 @@ export default function PreRecordedPlayer({
       clearTimeout(programEndTimeoutRef.current);
       programEndTimeoutRef.current = null;
     }
-  }, [content, content.id]);
+  }, [content, content.id, errorCheckTimeout]);
 
   useEffect(() => {
     const video = introVideoRef.current;

@@ -141,7 +141,7 @@ export default function VideoQualitySelector({
               )}
 
               {/* Quality Options */}
-              <div className="py-2">
+              <div className="py-2" role="listbox" aria-label="Video quality options">
                 {qualities.map((quality) => {
                   const isSelected = currentQuality === quality.value;
                   const Icon = QUALITY_ICONS[quality.value as keyof typeof QUALITY_ICONS] || Monitor;
@@ -149,9 +149,11 @@ export default function VideoQualitySelector({
                   return (
                     <button
                       key={quality.value}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
                       onClick={() => handleQualitySelect(quality.value)}
                       className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/10 transition-colors group"
-                      aria-selected={isSelected}
                     >
                       <div className="flex items-center gap-3 flex-1">
                         <Icon className="w-4 h-4 text-white/60 group-hover:text-white transition-colors" />

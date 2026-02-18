@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Joyride, {
+import React, { useEffect, useMemo, useState } from "react";
+import JoyrideLib, {
   ACTIONS,
   EVENTS,
   STATUS,
@@ -10,14 +10,18 @@ import Joyride, {
   type TooltipRenderProps,
 } from "react-joyride";
 
+const Joyride = JoyrideLib as any;
+
 const TOUR_SEEN_KEY = "ebomi_tour_seen_v1";
 
 function TourTooltip(props: TooltipRenderProps) {
   const { tooltipProps, step, primaryProps, skipProps, isLastStep, index } = props;
+  const { ref, ...restTooltipProps } = tooltipProps;
 
   return (
     <div
-      {...tooltipProps}
+      {...restTooltipProps}
+      ref={ref as unknown as React.RefObject<HTMLDivElement>}
       className="w-[min(92vw,420px)] rounded-2xl border-2 border-white/20 bg-gradient-to-br from-neutral-900/98 via-neutral-800/98 to-neutral-900/98 backdrop-blur-2xl shadow-2xl overflow-hidden"
       style={{
         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(212, 175, 55, 0.2)',

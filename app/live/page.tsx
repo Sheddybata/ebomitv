@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Navbar from "@/components/Navbar";
 import MuxLivePlayer from "@/components/MuxLivePlayer";
 import AmbientBackground from "@/components/AmbientBackground";
@@ -27,20 +27,7 @@ export default function LivePage() {
   const [error, setError] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(false);
 
-  // Fetch active live streams
-  useEffect(() => {
-    fetchLiveStreams();
-    // Poll for updates every 30 seconds, but only if we don't have persistent errors
-    const interval = setInterval(() => {
-      // Only poll if we don't have a persistent error
-      if (!error || error.includes("credentials")) {
-        fetchLiveStreams();
-      }
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchLiveStreams = async () => {
+  const fetchLiveStreams = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch("/api/mux/live/list?limit=10");
@@ -84,8 +71,18 @@ export default function LivePage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeStream]);
 
+  // Fetch active live streams
+  useEffect(() => {
+    fetchLiveStreams();
+    const interval = setInterval(() => {
+      if (!error || error.includes("credentials")) {
+        fetchLiveStreams();
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [error, fetchLiveStreams]);
 
   // Fallback playback ID if API fails (from your existing stream)
   const FALLBACK_PLAYBACK_ID = "JAph4wH6lutzw7cJZbX3r2axeSIrx3OhPsF2RdbR8aI";
