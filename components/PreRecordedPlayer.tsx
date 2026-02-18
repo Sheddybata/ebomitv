@@ -8,6 +8,8 @@ import CaptionOverlay from "./CaptionOverlay";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useI18n } from "@/lib/i18n";
 
+const WATCH_PROGRESS_KEY = "ebomi_tv_watch_progress";
+
 interface PreRecordedPlayerProps {
   content: PreRecordedContent;
   autoPlay?: boolean;
@@ -36,8 +38,45 @@ export default function PreRecordedPlayer({
   const introVideoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const programEndTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const watchProgressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const localizedTitle = currentVideo.titleLocalized?.[language] || currentVideo.title;
+
+  // Save watch progress for iframe videos (approximate based on time)
+  useEffect(() => {
+    if (!iframeRef.current || showIntro || hasError) return;
+
+    // For iframe videos, we can't track exact progress, but we can track watch time
+    const startTime = Date.now();
+    
+    watchProgressIntervalRef.current = setInterval(() => {
+      const watchTime = Date.now() - startTime;
+      // Estimate progress (assuming average video duration)
+      // This is approximate since we can't get exact duration from iframe
+      try {
+        const progressData = JSON.parse(
+          localStorage.getItem(`${WATCH_PROGRESS_KEY}_${currentVideo.id}`) || '{}'
+        );
+        const totalWatchTime = (progressData.totalWatchTime || 0) + 10000; // Add 10 seconds
+        
+        localStorage.setItem(
+          `${WATCH_PROGRESS_KEY}_${currentVideo.id}`,
+          JSON.stringify({
+            totalWatchTime,
+            lastWatched: Date.now(),
+          })
+        );
+      } catch (error) {
+        // Ignore errors
+      }
+    }, 10000); // Update every 10 seconds
+
+    return () => {
+      if (watchProgressIntervalRef.current) {
+        clearInterval(watchProgressIntervalRef.current);
+      }
+    };
+  }, [currentVideo.id, showIntro, hasError]);
 
   // Function to try a different video when current one fails
   // DISABLED: Don't auto-switch videos - let the parent component (LiveStream) handle schedule-based switching

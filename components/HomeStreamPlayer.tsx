@@ -8,6 +8,7 @@ import { generateWeeklySchedule, getCurrentProgram, getNextProgram } from "@/lib
 import { GALLERY_VIDEOS } from "@/lib/gallery-data";
 import PreRecordedPlayer from "./PreRecordedPlayer";
 import MuxLivePlayer from "./MuxLivePlayer";
+import { useProgram } from "@/contexts/ProgramContext";
 
 const INTRO_VIDEO = "/ebomitvintro.mp4";
 
@@ -36,14 +37,47 @@ export default function HomeStreamPlayer({ onStreamStatusChange, skipIntro = fal
   const introVideoRef = useRef<HTMLVideoElement>(null);
   const programCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const programEndTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { selectedProgram, setSelectedProgram } = useProgram();
 
   // Find video content from program
   const findVideoContent = (program: any): PreRecordedContent | null => {
-    // Extract video ID from program ID (format: videoId-day-index)
+    // Last resort first: if program has a direct videoUrl, use it immediately
+    if (program.videoUrl) {
+      return {
+        id: program.id,
+        title: program.title,
+        titleLocalized: program.titleLocalized,
+        descriptionLocalized: program.descriptionLocalized,
+        type: program.type === "worship" ? "worship" : program.type === "podcast" ? "podcast" : "sermon",
+        url: program.videoUrl,
+        thumbnail: program.thumbnail,
+      };
+    }
+    
+    // First, try to find by direct ID match (for search results)
+    let video = GALLERY_VIDEOS.find(v => v.id === program.id);
+    if (video) {
+      return {
+        id: video.id,
+        title: video.title,
+        titleLocalized: video.titleLocalized,
+        descriptionLocalized: video.descriptionLocalized,
+        type: program.type === "worship" ? "worship" : program.type === "podcast" ? "podcast" : "sermon",
+        url: video.videoUrl,
+        thumbnail: video.thumbnail,
+      };
+    }
+    
+    // If not found, extract video ID from program ID (format: videoId-day-index)
     const parts = program.id.split('-');
     if (parts.length >= 3) {
-      const videoId = parts.slice(0, -2).join('-');
-      const video = GALLERY_VIDEOS.find(v => v.id === videoId);
+      // Try different combinations: remove last 2 parts, then last 1 part
+      // This handles cases where video ID has multiple dashes
+      const videoId1 = parts.slice(0, -2).join('-');
+      const videoId2 = parts.slice(0, -1).join('-');
+      
+      video = GALLERY_VIDEOS.find(v => v.id === videoId1 || v.id === videoId2);
+      
       if (video) {
         return {
           id: video.id,
@@ -55,9 +89,44 @@ export default function HomeStreamPlayer({ onStreamStatusChange, skipIntro = fal
           thumbnail: video.thumbnail,
         };
       }
+      
+      // If still not found, try matching by title as fallback
+      if (program.title) {
+        video = GALLERY_VIDEOS.find(v => 
+          v.title === program.title || 
+          v.title.toLowerCase() === program.title.toLowerCase()
+        );
+        if (video) {
+          return {
+            id: video.id,
+            title: video.title,
+            titleLocalized: video.titleLocalized,
+            descriptionLocalized: video.descriptionLocalized,
+            type: program.type === "worship" ? "worship" : program.type === "podcast" ? "podcast" : "sermon",
+            url: video.videoUrl,
+            thumbnail: video.thumbnail,
+          };
+        }
+      }
     }
+    
     return null;
   };
+
+  // Listen for program selection from TVGuide or Search
+  useEffect(() => {
+    if (selectedProgram && !isMuxLive && !isLoading) {
+      const content = findVideoContent(selectedProgram);
+      if (content) {
+        setCurrentProgram({ program: selectedProgram, content });
+        setShowIntro(false);
+        // Clear selection after a short delay to allow playback to start
+        setTimeout(() => {
+          setSelectedProgram(null);
+        }, 500);
+      }
+    }
+  }, [selectedProgram, isMuxLive, isLoading, setSelectedProgram]);
 
   // Update current program based on schedule
   const updateCurrentProgramRef = useRef<() => void>(() => {});
@@ -126,6 +195,14 @@ export default function HomeStreamPlayer({ onStreamStatusChange, skipIntro = fal
       const response = await fetch("/api/mux/live/list?limit=10");
       
       if (!response.ok) {
+        // Handle 401 (Unauthorized) silently - Mux credentials not configured
+        if (response.status === 401) {
+          setActiveStream(null);
+          setIsMuxLive(false);
+          setIsLoading(false);
+          return; // Silently exit - this is expected if Mux is not configured
+        }
+        
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `Server error: ${response.status}`);
       }
@@ -152,7 +229,10 @@ export default function HomeStreamPlayer({ onStreamStatusChange, skipIntro = fal
         setIsLoading(false);
       }
     } catch (err: any) {
-      console.warn("Error fetching live streams:", err.message);
+      // Only log non-401 errors (401 is expected when Mux credentials are not configured)
+      if (!err.message?.includes("401") && !err.message?.includes("Unauthorized")) {
+        console.warn("Error fetching live streams:", err.message);
+      }
       setActiveStream(null);
       setIsMuxLive(false);
       setIsLoading(false);

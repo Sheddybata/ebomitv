@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef } from "react";
 import { Play, Pause, PictureInPicture, Volume2, VolumeX } from "lucide-react";
 import { PreRecordedContent } from "@/lib/types";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
 
 interface EnhancedVideoPlayerProps {
   content: PreRecordedContent | null;
@@ -14,6 +16,7 @@ interface EnhancedVideoPlayerProps {
 
 const INTRO_VIDEO = "/ebomitvintro.mp4";
 const STORAGE_KEY = "ebomi_tv_playback_state";
+const WATCH_PROGRESS_KEY = "ebomi_tv_watch_progress";
 
 interface PlaybackState {
   contentId: string;
@@ -39,6 +42,8 @@ export default function EnhancedVideoPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [networkError, setNetworkError] = useState(false);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const [hoverTime, setHoverTime] = useState<number | null>(null);
 
   // Load saved playback state
   useEffect(() => {
@@ -77,6 +82,18 @@ export default function EnhancedVideoPlayer({
         timestamp: Date.now(),
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+      // Also save watch progress for video cards
+      if (videoRef.current.duration > 0) {
+        const progress = (videoRef.current.currentTime / videoRef.current.duration) * 100;
+        localStorage.setItem(
+          `${WATCH_PROGRESS_KEY}_${content.id}`,
+          JSON.stringify({
+            progress: Math.min(100, progress),
+            lastWatched: Date.now(),
+          })
+        );
+      }
     } catch (error) {
       console.error("Error saving playback state:", error);
     }
@@ -138,6 +155,67 @@ export default function EnhancedVideoPlayer({
       }, 3000);
     }
   };
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onPlayPause: () => {
+      if (videoRef.current) {
+        if (isPlaying) {
+          videoRef.current.pause();
+        } else {
+          videoRef.current.play();
+        }
+      }
+    },
+    onSeekBackward: (seconds = 10) => {
+      if (videoRef.current) {
+        videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - seconds);
+      }
+    },
+    onSeekForward: (seconds = 10) => {
+      if (videoRef.current) {
+        videoRef.current.currentTime = Math.min(
+          videoRef.current.duration,
+          videoRef.current.currentTime + seconds
+        );
+      }
+    },
+    onMute: () => {
+      if (videoRef.current) {
+        videoRef.current.muted = !isMuted;
+        setIsMuted(!isMuted);
+      }
+    },
+    onFullscreen: () => {
+      if (videoRef.current) {
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        } else {
+          videoRef.current.requestFullscreen();
+        }
+      }
+    },
+    onPictureInPicture: () => {
+      enterPictureInPicture();
+    },
+    onOpenSearch: () => {
+      // Search is handled by navbar
+    },
+  }, true);
+
+  // Keyboard shortcut for help (?)
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+        const target = e.target as HTMLElement;
+        if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+          setShowShortcutsHelp(true);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
 
   // Media Session API for background playback
   useEffect(() => {
@@ -371,13 +449,41 @@ export default function EnhancedVideoPlayer({
         <div className="absolute bottom-0 left-0 right-0 p-4">
           {/* Progress Bar */}
           <div className="mb-3">
-            <div className="h-1 bg-white/20 rounded-full overflow-hidden">
+            <div 
+              className="h-1 bg-white/20 rounded-full overflow-hidden relative cursor-pointer group"
+              onMouseMove={(e) => {
+                if (duration > 0) {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const percent = (e.clientX - rect.left) / rect.width;
+                  setHoverTime(Math.max(0, Math.min(1, percent)));
+                }
+              }}
+              onMouseLeave={() => setHoverTime(null)}
+              onClick={(e) => {
+                if (videoRef.current && duration > 0) {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const percent = (e.clientX - rect.left) / rect.width;
+                  videoRef.current.currentTime = percent * duration;
+                }
+              }}
+            >
               <div
                 className="h-full bg-ministry-gold transition-all"
                 style={{
                   width: duration > 0 ? `${(currentTime / duration) * 100}%` : "0%",
                 }}
               />
+              {/* Thumbnail Preview on Hover */}
+              {hoverTime !== null && duration > 0 && (
+                <div 
+                  className="absolute bottom-4 transform -translate-x-1/2 pointer-events-none z-20"
+                  style={{ left: `${hoverTime * 100}%` }}
+                >
+                  <div className="bg-black/90 rounded px-2 py-1 text-white text-xs whitespace-nowrap">
+                    {formatTime(hoverTime * duration)}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -425,6 +531,12 @@ export default function EnhancedVideoPlayer({
           </div>
         </div>
       </div>
+
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp
+        isOpen={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
+      />
     </div>
   );
 }

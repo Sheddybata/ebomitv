@@ -1,15 +1,47 @@
 "use client";
 
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Menu, X, Search } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useI18n } from "@/lib/i18n";
+import SearchOverlay from "./SearchOverlay";
+import { useSwipeGestures } from "@/hooks/useSwipeGestures";
+import { useHapticFeedback } from "@/hooks/useHapticFeedback";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const { t } = useI18n();
+  const { lightTap } = useHapticFeedback();
+
+  // Swipe down to close mobile menu
+  useSwipeGestures({
+    onSwipeDown: () => {
+      if (mobileMenuOpen) {
+        setMobileMenuOpen(false);
+        lightTap();
+      }
+    },
+    threshold: 50,
+  });
+
+  // Keyboard shortcut for search (Ctrl/Cmd + K)
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+      if (e.key === 'Escape' && searchOpen) {
+        setSearchOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [searchOpen]);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass px-4 md:px-6 py-3 md:py-4 transition-all duration-500 ease-in-out">
@@ -83,14 +115,26 @@ export default function Navbar() {
               {t("nav.about")}
             </Link>
           </div>
-          <div className="hidden md:block">
-            {/* Added a placeholder selector here if needed, or we can move the main one to navbar */}
-          </div>
+          {/* Search Button */}
+          <button
+            onClick={() => {
+              lightTap();
+              setSearchOpen(true);
+            }}
+            className="p-2 hover:bg-[rgba(var(--foreground),0.12)] rounded-lg transition-colors text-foreground/70 hover:text-foreground"
+            aria-label="Search"
+            title="Search (Ctrl+K)"
+          >
+            <Search className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Mobile Menu Button */}
         <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          onClick={() => {
+            lightTap();
+            setMobileMenuOpen(!mobileMenuOpen);
+          }}
           className="md:hidden text-foreground p-2 hover:bg-[rgba(var(--foreground),0.12)] rounded-lg transition-colors flex items-center gap-2"
           aria-label="Menu"
         >
@@ -175,6 +219,12 @@ export default function Navbar() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Search Overlay */}
+      <SearchOverlay
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+      />
     </nav>
   );
 }

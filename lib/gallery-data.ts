@@ -343,7 +343,7 @@ export const GALLERY_VIDEOS: GalleryVideo[] = [
     description: "James Aladiran speaks with Prophet Isa El-Buba as he shares his life-changing testimony of encountering Jesus as a former jihadist.",
     thumbnail: "/category url/interviews/image.jpg",
     videoUrl: "https://www.youtube.com/embed/2oo8tvizyZA?si=jKpqsqoj3f4e3Us8",
-    category: "podcast",
+    category: "interview",
     guest: "James Aladiran & Prophet Isa El-Buba",
     date: "2026",
     featured: true,

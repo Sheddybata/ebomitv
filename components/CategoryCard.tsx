@@ -1,9 +1,11 @@
 "use client";
 
+import { memo, useCallback } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { VideoCategory } from "@/lib/gallery-data";
 import { useI18n } from "@/lib/i18n";
+import { useHapticFeedback } from "@/hooks/useHapticFeedback";
 
 interface CategoryCardProps {
   category: {
@@ -17,17 +19,23 @@ interface CategoryCardProps {
   count?: number;
 }
 
-export default function CategoryCard({
+const CategoryCard = memo(function CategoryCard({
   category,
   isSelected,
   onClick,
   count,
 }: CategoryCardProps) {
   const { t } = useI18n();
+  const { lightTap } = useHapticFeedback();
+
+  const handleClick = useCallback(() => {
+    lightTap(); // Haptic feedback on mobile
+    onClick();
+  }, [onClick, lightTap]);
 
   return (
     <motion.button
-      onClick={onClick}
+      onClick={handleClick}
       className={`relative group overflow-hidden rounded-xl border-2 transition-all duration-500 ${
         isSelected
           ? "border-ministry-gold shadow-lg shadow-ministry-gold/20 scale-[1.02]"
@@ -82,5 +90,9 @@ export default function CategoryCard({
       </div>
     </motion.button>
   );
-}
+});
+
+CategoryCard.displayName = "CategoryCard";
+
+export default CategoryCard;
 

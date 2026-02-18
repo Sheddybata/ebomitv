@@ -1,5 +1,6 @@
 import { TVProgram } from "./types";
 import { GALLERY_VIDEOS } from "./gallery-data";
+import { getOrderedVideos, getVideoDuration } from "./schedule-config";
 
 const parseDisplayDate = (dateStr: string): Date | null => {
   if (!dateStr) return null;
@@ -9,13 +10,7 @@ const parseDisplayDate = (dateStr: string): Date | null => {
 };
 
 const minutesForVideo = (title: string, category: string): number => {
-  const lower = title.toLowerCase();
-  if (lower.includes("fire on the altar")) return 90;
-  if (lower.includes("prayer rally")) return 90;
-  if (lower.includes("service")) return 90;
-  if (category === "podcast") return 45;
-  if (category === "praise") return 30;
-  return 60;
+  return getVideoDuration(title, category);
 };
 
 // Generate a rolling 7-day schedule from gallery videos (continuous loop)
@@ -24,12 +19,8 @@ export function generateWeeklySchedule(): TVProgram[] {
   const schedule: TVProgram[] = [];
   const now = new Date();
 
-  // Sort videos by their provided date (oldest to newest) to distribute chronologically
-  const sortedVideos = [...GALLERY_VIDEOS].sort((a, b) => {
-    const da = parseDisplayDate(a.date)?.getTime() || 0;
-    const db = parseDisplayDate(b.date)?.getTime() || 0;
-    return da - db;
-  });
+  // Get ordered videos (uses custom order if configured, otherwise sorted by date)
+  const sortedVideos = getOrderedVideos();
 
   // If no videos, return empty
   if (sortedVideos.length === 0) return schedule;
@@ -62,6 +53,23 @@ export function generateWeeklySchedule(): TVProgram[] {
       const start = new Date(dayStart.getTime() + minutesUsed * 60 * 1000);
       const end = new Date(start.getTime() + durationMin * 60 * 1000);
 
+      // Reverse schedule: morning programs go to evening, evening to morning
+      // Flip AM/PM: 8 AM → 8 PM, 8 PM → 8 AM, etc.
+      const startHour = start.getHours();
+      const startMinutes = start.getMinutes();
+      const endHour = end.getHours();
+      const endMinutes = end.getMinutes();
+      
+      // Reverse hours: if < 12 (AM), add 12 (make PM); if >= 12 (PM), subtract 12 (make AM)
+      const reversedStartHour = startHour < 12 ? startHour + 12 : startHour - 12;
+      const reversedEndHour = endHour < 12 ? endHour + 12 : endHour - 12;
+      
+      const reversedStart = new Date(dayStart);
+      reversedStart.setHours(reversedStartHour, startMinutes, 0, 0);
+      
+      const reversedEnd = new Date(dayStart);
+      reversedEnd.setHours(reversedEndHour, endMinutes, 0, 0);
+
       schedule.push({
         id: `${video.id}-${day}-${videoIndex}`,
         title: video.title,
@@ -69,8 +77,8 @@ export function generateWeeklySchedule(): TVProgram[] {
         description: video.description,
         descriptionLocalized: video.descriptionLocalized,
         thumbnail: video.thumbnail,
-        startTime: start,
-        endTime: end,
+        startTime: reversedStart,
+        endTime: reversedEnd,
         type: video.category === "praise" ? "worship" : video.category === "podcast" ? "teaching" : "sermon",
         channel: "Main",
         isLive: false,

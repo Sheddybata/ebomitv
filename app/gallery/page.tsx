@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Search, X, Play } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import VideoCard from "@/components/VideoCard";
 import VideoPlayerModal from "@/components/VideoPlayerModal";
@@ -191,17 +192,25 @@ export default function GalleryPage() {
           </div>
 
           {/* Video Grid */}
-          {filteredVideos.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
-              {filteredVideos.map((video) => (
-                <VideoCard
-                  key={video.id}
-                  video={video}
-                  onPlay={handlePlayVideo}
-                />
-              ))}
-            </div>
-          ) : (
+          <AnimatePresence mode="wait">
+            {filteredVideos.length > 0 ? (
+              <motion.div 
+                key={`grid-${selectedCategory}-${searchQuery}`}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {filteredVideos.map((video) => (
+                  <VideoCard
+                    key={video.id}
+                    video={video}
+                    onPlay={handlePlayVideo}
+                  />
+                ))}
+              </motion.div>
+            ) : (
             <div className="text-center py-24 glass rounded-3xl border border-dashed border-[rgba(var(--foreground),0.12)]">
               <div className="text-6xl mb-6 opacity-50">📹</div>
               <h3 className="font-serif text-3xl font-bold text-foreground mb-3">
@@ -220,7 +229,8 @@ export default function GalleryPage() {
                 {t("gallery.clearFilters")}
               </button>
             </div>
-          )}
+            )}
+          </AnimatePresence>
         </div>
       </div>
 

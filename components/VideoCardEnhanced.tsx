@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, memo, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Play, Clock, Eye, User, Mic, Flame } from "lucide-react";
 import { motion } from "framer-motion";
 import Image from "next/image";
@@ -8,19 +8,24 @@ import { GalleryVideo } from "@/lib/gallery-data";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useI18n } from "@/lib/i18n";
 import { translateVideoText } from "@/lib/video-translations";
-import { useHapticFeedback } from "@/hooks/useHapticFeedback";
 
-interface VideoCardProps {
+interface VideoCardEnhancedProps {
   video: GalleryVideo;
   onPlay?: (video: GalleryVideo) => void;
-  showProgress?: boolean;
+  showProgress?: boolean; // New: Show watch progress
+  showPreview?: boolean; // New: Show preview on hover
 }
 
-const VideoCard = memo(function VideoCard({ video, onPlay, showProgress = true }: VideoCardProps) {
+export default function VideoCardEnhanced({ 
+  video, 
+  onPlay,
+  showProgress = true,
+  showPreview = false, // Disabled by default for gradual rollout
+}: VideoCardEnhancedProps) {
   const { language } = useLanguage();
   const { t } = useI18n();
   const [watchProgress, setWatchProgress] = useState(0);
-  const { lightTap } = useHapticFeedback();
+  const [isHovered, setIsHovered] = useState(false);
 
   const pick = (base?: string, localized?: Record<string, string>) =>
     (localized && localized[language]) || base || "";
@@ -28,34 +33,10 @@ const VideoCard = memo(function VideoCard({ video, onPlay, showProgress = true }
   // Load watch progress from localStorage
   useEffect(() => {
     if (showProgress) {
-      // Try new format first
-      const saved = localStorage.getItem(`ebomi_tv_watch_progress_${video.id}`);
+      const saved = localStorage.getItem(`ebomi_tv_watch_${video.id}`);
       if (saved) {
         try {
           const data = JSON.parse(saved);
-          if (data.progress && data.progress > 0) {
-            setWatchProgress(Math.min(100, data.progress));
-            return;
-          }
-          // If no progress but has watch time, estimate progress
-          if (data.totalWatchTime && video.duration) {
-            // Estimate: assume user watched a portion
-            // This is approximate for iframe videos
-            const estimatedProgress = Math.min(50, (data.totalWatchTime / 60000) * 2); // Rough estimate
-            if (estimatedProgress > 5) {
-              setWatchProgress(estimatedProgress);
-            }
-          }
-        } catch (error) {
-          // Ignore errors
-        }
-      }
-      
-      // Fallback to old format
-      const oldSaved = localStorage.getItem(`ebomi_tv_watch_${video.id}`);
-      if (oldSaved) {
-        try {
-          const data = JSON.parse(oldSaved);
           if (data.progress && data.progress > 0) {
             setWatchProgress(Math.min(100, data.progress));
           }
@@ -64,16 +45,14 @@ const VideoCard = memo(function VideoCard({ video, onPlay, showProgress = true }
         }
       }
     }
-  }, [video.id, showProgress, video.duration]);
+  }, [video.id, showProgress]);
 
-  // Get base values (with localized fallback if available)
   const baseTitle = pick(video.title, video.titleLocalized);
   const baseDescription = pick(video.description, video.descriptionLocalized);
   const preacher = pick(video.preacher, video.preacherLocalized);
   const guest = pick(video.guest, video.guestLocalized);
   const date = pick(video.date, video.dateLocalized);
 
-  // Apply automatic translations if no localized data exists
   const title = video.titleLocalized ? baseTitle : translateVideoText(baseTitle, language);
   const description = video.descriptionLocalized ? baseDescription : translateVideoText(baseDescription, language);
 
@@ -81,12 +60,11 @@ const VideoCard = memo(function VideoCard({ video, onPlay, showProgress = true }
     return t(`category.${category}` as any);
   };
 
-  const handleClick = useCallback(() => {
-    lightTap(); // Haptic feedback on mobile
+  const handleClick = () => {
     if (onPlay) {
       onPlay(video);
     }
-  }, [onPlay, video, lightTap]);
+  };
 
   const getCategoryColor = (category: GalleryVideo["category"]) => {
     switch (category) {
@@ -113,6 +91,8 @@ const VideoCard = memo(function VideoCard({ video, onPlay, showProgress = true }
       whileHover={{ y: -8, scale: 1.01 }}
       transition={{ duration: 0.2 }}
       onClick={handleClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {/* Thumbnail */}
       <div className="relative aspect-video bg-gradient-to-br from-background to-[rgba(var(--foreground),0.1)] overflow-hidden">
@@ -123,11 +103,8 @@ const VideoCard = memo(function VideoCard({ video, onPlay, showProgress = true }
             alt={title || video.title}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            className="object-cover group-hover:scale-110 transition-transform duration-300"
+            className="object-cover group-hover:scale-110 transition-transform duration-500"
             unoptimized={video.thumbnail.includes('category url')}
-            loading="lazy"
-            placeholder="blur"
-            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -138,9 +115,9 @@ const VideoCard = memo(function VideoCard({ video, onPlay, showProgress = true }
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-        {/* Watch Progress Bar */}
+        {/* Watch Progress Bar - NEW */}
         {showProgress && isPartiallyWatched && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50 z-10">
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50">
             <div 
               className="h-full bg-ministry-gold transition-all duration-300"
               style={{ width: `${watchProgress}%` }}
@@ -148,7 +125,7 @@ const VideoCard = memo(function VideoCard({ video, onPlay, showProgress = true }
           </div>
         )}
 
-        {/* Continue Watching Badge */}
+        {/* Continue Watching Badge - NEW */}
         {showProgress && isPartiallyWatched && (
           <div className="absolute top-2 left-2 z-10">
             <span className="px-2 py-1 bg-ministry-gold/90 text-white text-[9px] font-bold rounded shadow-sm">
@@ -158,7 +135,7 @@ const VideoCard = memo(function VideoCard({ video, onPlay, showProgress = true }
         )}
 
         {/* Category Badge */}
-        <div className={`absolute ${isPartiallyWatched ? 'top-2 right-2' : 'top-2 left-2'} z-10`}>
+        <div className={`absolute top-2 ${isPartiallyWatched ? 'right-2' : 'left-2'} z-10`}>
           <span
             className={`px-2 py-1 ${getCategoryColor(video.category)} text-white text-[10px] font-bold rounded tracking-wider`}
           >
@@ -236,10 +213,4 @@ const VideoCard = memo(function VideoCard({ video, onPlay, showProgress = true }
       </div>
     </motion.div>
   );
-});
-
-VideoCard.displayName = "VideoCard";
-
-export default VideoCard;
-
-
+}

@@ -90,5 +90,83 @@
   .scale-102 {
     transform: scale(1.02);
   }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Mobile Bottom Navigation Spacing */
+  @media (max-width: 768px) {
+    body {
+      padding-bottom: 80px; /* Space for bottom navigation */
+    }
+  }
+
+  /* TV Optimizations */
+  @media (min-width: 1920px) {
+    /* Larger text for TV viewing distance */
+    body {
+      font-size: 1.125rem; /* 18px base */
+    }
+    
+    h1 {
+      font-size: 3.5rem; /* 56px */
+    }
+    
+    h2 {
+      font-size: 2.5rem; /* 40px */
+    }
+    
+    h3 {
+      font-size: 2rem; /* 32px */
+    }
+    
+    /* Larger touch targets for TV remotes */
+    button, a {
+      min-height: 60px;
+      min-width: 60px;
+      padding: 1rem 1.5rem;
+    }
+    
+    /* Larger video cards */
+    .video-card {
+      transform: scale(1.05);
+    }
+    
+    /* Better focus indicators for TV navigation */
+    *:focus-visible {
+      outline: 4px solid rgb(var(--ministry-gold));
+      outline-offset: 4px;
+      border-radius: 8px;
+    }
+    
+    /* Reduced animations for TV (can cause motion sickness) */
+    * {
+      animation-duration: 0.3s !important;
+      transition-duration: 0.2s !important;
+    }
+  }
+
+  /* TV-specific: High contrast mode */
+  @media (prefers-contrast: high) {
+    body {
+      --background: 0 0 0;
+      --foreground: 255 255 255;
+    }
+  }
+
+  /* TV-specific: Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 

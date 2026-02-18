@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GalleryVideo } from "@/lib/gallery-data";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translateVideoText } from "@/lib/video-translations";
+
+const WATCH_PROGRESS_KEY = "ebomi_tv_watch_progress";
 
 interface VideoPlayerModalProps {
   video: GalleryVideo | null;
@@ -50,18 +52,49 @@ export default function VideoPlayerModal({
 }: VideoPlayerModalProps) {
   const [hasError, setHasError] = useState(false);
   const { language } = useLanguage();
+  const watchProgressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
       setHasError(false);
+      
+      // Track watch progress for modal videos
+      if (video) {
+        const startTime = Date.now();
+        
+        watchProgressIntervalRef.current = setInterval(() => {
+          try {
+            const progressData = JSON.parse(
+              localStorage.getItem(`${WATCH_PROGRESS_KEY}_${video.id}`) || '{}'
+            );
+            const totalWatchTime = (progressData.totalWatchTime || 0) + 10000;
+            
+            localStorage.setItem(
+              `${WATCH_PROGRESS_KEY}_${video.id}`,
+              JSON.stringify({
+                totalWatchTime,
+                lastWatched: Date.now(),
+              })
+            );
+          } catch (error) {
+            // Ignore errors
+          }
+        }, 10000);
+      }
     } else {
       document.body.style.overflow = "unset";
+      if (watchProgressIntervalRef.current) {
+        clearInterval(watchProgressIntervalRef.current);
+      }
     }
     return () => {
       document.body.style.overflow = "unset";
+      if (watchProgressIntervalRef.current) {
+        clearInterval(watchProgressIntervalRef.current);
+      }
     };
-  }, [isOpen]);
+  }, [isOpen, video]);
 
   if (!video) return null;
 

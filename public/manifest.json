@@ -1,0 +1,44 @@
+{
+  "name": "Ebomi TV",
+  "short_name": "Ebomi TV",
+  "description": "Watch live streams, sermons, and gospel content from EBOMI Ministries",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0C0C0F",
+  "theme_color": "#0201B4",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/logo/ebomilogo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo/ebomilogo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["entertainment", "education", "lifestyle"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Live Stream",
+      "short_name": "Live",
+      "description": "Watch live streams",
+      "url": "/live",
+      "icons": [{ "src": "/logo/ebomilogo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Gallery",
+      "short_name": "Gallery",
+      "description": "Browse video gallery",
+      "url": "/#gallery",
+      "icons": [{ "src": "/logo/ebomilogo.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

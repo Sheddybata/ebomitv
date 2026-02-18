@@ -1,20 +1,30 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, Suspense } from "react";
 import { Search, X, Play, Hand, Flame } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import HomeStreamPlayer from "@/components/HomeStreamPlayer";
-import TVGuide from "@/components/TVGuide";
 import LiveChat from "@/components/LiveChat";
+
+// Lazy load TVGuide - only load when scrolled into view
+import LazyTVGuide from "@/components/LazyTVGuide";
 import PrayerRequestWidget from "@/components/PrayerRequestWidget";
 import GiveButton from "@/components/GiveButton";
 import LanguageSelector from "@/components/LanguageSelector";
 import AmbientBackground from "@/components/AmbientBackground";
 import GuidedTour from "@/components/GuidedTour";
+import dynamic from "next/dynamic";
 import VideoCard from "@/components/VideoCard";
-import VideoPlayerModal from "@/components/VideoPlayerModal";
 import CategoryCard from "@/components/CategoryCard";
 import SectionNavigator from "@/components/SectionNavigator";
+import TVOptimizedLayout from "@/components/TVOptimizedLayout";
+import SkeletonCard from "@/components/SkeletonCard";
+
+// Lazy load heavy components
+const VideoPlayerModal = dynamic(() => import("@/components/VideoPlayerModal"), {
+  loading: () => null,
+  ssr: false,
+});
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -28,7 +38,7 @@ import {
 } from "@/lib/gallery-data";
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Home() {
   const { language, setLanguage } = useLanguage();
@@ -40,6 +50,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedVideo, setSelectedVideo] = useState<GalleryVideo | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoadingVideos, setIsLoadingVideos] = useState(false);
 
   // Handle hash navigation on page load
   useEffect(() => {
@@ -94,17 +105,19 @@ export default function Home() {
     setTimeout(() => setSelectedVideo(null), 300);
   };
 
-  const getCategoryCount = (category: VideoCategory) => {
+  // Memoize category count calculation
+  const getCategoryCount = useCallback((category: VideoCategory): number => {
     if (category === "all") return GALLERY_VIDEOS.length;
     if (category === "featured") return getFeaturedVideos().length;
     return GALLERY_VIDEOS.filter((v) => v.category === category).length;
-  };
+  }, []);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-background">
-      <AmbientBackground />
-      <Navbar />
-      <GuidedTour />
+    <TVOptimizedLayout>
+      <main className="relative min-h-screen overflow-hidden bg-background">
+        <AmbientBackground />
+        <Navbar />
+        <GuidedTour />
       
       <div className="relative z-10 pt-20 md:pt-24 lg:pt-28 pb-6 px-4 md:px-6">
         <div className="max-w-7xl mx-auto">
@@ -134,7 +147,7 @@ export default function Home() {
             </div>
 
             {/* Program Guide - Below video player */}
-            <TVGuide />
+            <LazyTVGuide />
             
             {/* Sidebar with Chat - Hidden on mobile unless toggled, always visible on desktop */}
             <div className="hidden md:block">
@@ -145,15 +158,24 @@ export default function Home() {
           {/* Featured Section */}
           {getFeaturedVideos().length > 0 && (
             <section id="featured" className="mt-16 md:mt-20 pt-16 md:pt-20 border-t border-foreground/10">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
-                {getFeaturedVideos().map((video) => (
-                  <VideoCard
-                    key={video.id}
-                    video={video}
-                    onPlay={handlePlayVideo}
-                  />
-                ))}
-              </div>
+              {isLoadingVideos ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
+                  {[...Array(4)].map((_, i) => (
+                    <SkeletonCard key={i} />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
+                  {getFeaturedVideos().map((video) => (
+                    <VideoCard
+                      key={video.id}
+                      video={video}
+                      onPlay={handlePlayVideo}
+                      showProgress={true}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
@@ -169,6 +191,8 @@ export default function Home() {
                   priority
                   className="object-cover"
                   sizes="100vw"
+                  placeholder="blur"
+                  blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
                 <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
@@ -214,7 +238,7 @@ export default function Home() {
                   {CATEGORIES.length} {t("gallery.collectionsLabel")}
                 </p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
                 {CATEGORIES.map((category) => (
                   <CategoryCard
                     key={category.value}
@@ -222,8 +246,7 @@ export default function Home() {
                     isSelected={selectedCategory === category.value}
                     onClick={() => {
                       setSelectedCategory(category.value);
-                      // Smooth scroll to gallery section
-                      document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      // Maintain scroll position - don't scroll to top
                     }}
                     count={getCategoryCount(category.value)}
                   />
@@ -268,17 +291,25 @@ export default function Home() {
             </div>
 
             {/* Video Grid */}
-            {filteredVideos.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
-                {filteredVideos.map((video) => (
-                  <VideoCard
-                    key={video.id}
-                    video={video}
-                    onPlay={handlePlayVideo}
-                  />
-                ))}
-              </div>
-            ) : (
+            <AnimatePresence mode="wait">
+              {filteredVideos.length > 0 ? (
+                <motion.div 
+                  key={`grid-${selectedCategory}-${searchQuery}`}
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {filteredVideos.map((video) => (
+                    <VideoCard
+                      key={video.id}
+                      video={video}
+                      onPlay={handlePlayVideo}
+                    />
+                  ))}
+                </motion.div>
+              ) : (
               <div className="text-center py-24 glass rounded-3xl border border-dashed border-[rgba(var(--foreground),0.12)]">
                 <div className="text-6xl mb-6 opacity-50">📹</div>
                 <h3 className="font-serif text-3xl font-bold text-foreground mb-3">
@@ -297,7 +328,8 @@ export default function Home() {
                   {t("gallery.clearFilters")}
                 </button>
               </div>
-            )}
+              )}
+            </AnimatePresence>
           </section>
 
           {/* About Section - Last section */}
@@ -571,7 +603,8 @@ export default function Home() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
       />
-    </main>
+      </main>
+    </TVOptimizedLayout>
   );
 }
 

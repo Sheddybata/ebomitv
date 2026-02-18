@@ -1,61 +1,66 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { Calendar, Clock } from "lucide-react";
-import { motion } from "framer-motion";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { Calendar, Clock, Play, Search, Filter, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { TVProgram } from "@/lib/types";
 import { useI18n } from "@/lib/i18n";
 import {
   generateWeeklySchedule,
+  getCurrentProgram,
   getNextProgram,
   getProgramsForDay,
   formatProgramTime,
   getTimeUntil,
 } from "@/lib/tv-schedule";
 import { format, isToday, addDays, subDays, startOfDay } from "date-fns";
-import VideoPlayerModal from "./VideoPlayerModal";
+import { useProgram } from "@/contexts/ProgramContext";
 import { GALLERY_VIDEOS, GalleryVideo } from "@/lib/gallery-data";
+import { useHapticFeedback } from "@/hooks/useHapticFeedback";
 
 export default function TVGuide() {
   const [schedule, setSchedule] = useState<TVProgram[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentTime, setCurrentTime] = useState(new Date());
   const [viewMode] = useState<"timeline">("timeline");
-  const [selectedVideo, setSelectedVideo] = useState<GalleryVideo | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState<string | null>(null);
+  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
+  const [navigationIndex, setNavigationIndex] = useState<number>(-1); // Track current position in program list
   const timelineRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const programRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const { t, language } = useI18n();
+  const { playProgram } = useProgram();
+  const { lightTap, mediumTap } = useHapticFeedback();
 
   const pick = (base?: string, localized?: Record<string, string>) =>
     (localized && localized[language]) || base || "";
 
+  // Memoize schedule generation
+  const weeklySchedule = useMemo(() => generateWeeklySchedule(), []);
+
   useEffect(() => {
-    // Generate schedule on mount - only once
-    const weeklySchedule = generateWeeklySchedule();
     setSchedule(weeklySchedule);
     setCurrentTime(new Date());
 
-    // Update current time every 10 seconds for more accurate current program detection
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 10000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [weeklySchedule]);
 
-  // Check if mobile
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Scroll to current time on mount
   useEffect(() => {
     if (viewMode === "timeline" && scrollContainerRef.current && isToday(selectedDate)) {
       const currentHour = currentTime.getHours();
@@ -64,94 +69,100 @@ export default function TVGuide() {
     }
   }, [viewMode, currentTime, selectedDate]);
 
-  // Calculate row assignment with balanced distribution
-  const calculateRows = (programs: TVProgram[]): Map<string, number> => {
-    const rowMap = new Map<string, number>();
+  // Memoize day programs
+  const dayPrograms = useMemo(() => getProgramsForDay(schedule, selectedDate), [schedule, selectedDate]);
+
+  // Memoize filtered programs
+  const filteredPrograms = useMemo(() => {
+    let programs = dayPrograms;
     
-    // Sort programs by start time
-    const sorted = [...programs].sort((a, b) => 
-      a.startTime.getTime() - b.startTime.getTime()
-    );
+    if (searchQuery) {
+      programs = programs.filter((program) => {
+        const title = pick(program.title, program.titleLocalized) || "";
+        const description = pick(program.description, program.descriptionLocalized) || "";
+        const searchLower = searchQuery.toLowerCase();
+        return (
+          title.toLowerCase().includes(searchLower) ||
+          description.toLowerCase().includes(searchLower) ||
+          program.type.toLowerCase().includes(searchLower)
+        );
+      });
+    }
 
-    // Track programs in each row with their time ranges
-    const rowPrograms: Array<Array<{ start: number; end: number }>> = [];
+    if (filterType) {
+      programs = programs.filter((program) => program.type === filterType);
+    }
 
-    sorted.forEach((program) => {
-      const programStart = program.startTime.getTime();
-      const programEnd = program.endTime.getTime();
-      const availableRows: number[] = [];
+    return programs;
+  }, [dayPrograms, searchQuery, filterType, language]);
 
-      // Find all rows where this program can fit (no overlap)
-      for (let rowIndex = 0; rowIndex < rowPrograms.length; rowIndex++) {
-        const row = rowPrograms[rowIndex];
-        let canFit = true;
-
-        // Check if this program overlaps with any program in this row
-        for (const existing of row) {
-          // Overlap occurs if: programStart < existing.end AND programEnd > existing.start
-          if (programStart < existing.end && programEnd > existing.start) {
-            canFit = false;
-            break;
-          }
+  // Memoize deduplication
+  const limitedPrograms = useMemo(() => {
+    const uniqueVideoIds = new Set<string>();
+    return filteredPrograms.filter((program) => {
+      const parts = program.id.split("-");
+      if (parts.length >= 3) {
+        const videoId = parts.slice(0, -2).join("-");
+        if (!uniqueVideoIds.has(videoId)) {
+          uniqueVideoIds.add(videoId);
+          return true;
         }
-
-        if (canFit) {
-          availableRows.push(rowIndex);
-        }
+        return false;
       }
-
-      // Choose row: prefer rows with fewer programs to balance distribution
-      let assignedRow = -1;
-      if (availableRows.length > 0) {
-        // Sort available rows by number of programs (fewer = better)
-        availableRows.sort((a, b) => rowPrograms[a].length - rowPrograms[b].length);
-        assignedRow = availableRows[0];
-        rowPrograms[assignedRow].push({ start: programStart, end: programEnd });
-      } else {
-        // No available row, create new one
-        assignedRow = rowPrograms.length;
-        rowPrograms.push([{ start: programStart, end: programEnd }]);
-      }
-
-      rowMap.set(program.id, assignedRow);
+      return true;
     });
+  }, [filteredPrograms]);
 
-    return rowMap;
+  const currentProgram = getCurrentProgram(limitedPrograms);
+  
+  // Sort all programs by start time for sequential navigation
+  const sortedPrograms = [...limitedPrograms].sort((a, b) => 
+    a.startTime.getTime() - b.startTime.getTime()
+  );
+
+  // Find current program index in sorted list
+  const getCurrentProgramIndex = (): number => {
+    if (currentProgram) {
+      return sortedPrograms.findIndex(p => p.id === currentProgram.id);
+    }
+    // If no current program, find the program that should be playing now
+    const now = new Date();
+    const index = sortedPrograms.findIndex(p => 
+      now >= p.startTime && now < p.endTime
+    );
+    if (index >= 0) return index;
+    // If no current program, find the next upcoming program
+    const nextIndex = sortedPrograms.findIndex(p => p.startTime > now);
+    return nextIndex >= 0 ? nextIndex : 0;
   };
 
-  const dayPrograms = getProgramsForDay(schedule, selectedDate);
-  
-  // Remove duplicates by video ID and keep only the first occurrence of each
-  const uniqueVideoIds = new Set<string>();
-  const limitedPrograms = dayPrograms.filter((program) => {
-    // Extract video ID from program ID (format: videoId-day-index)
-    const parts = program.id.split('-');
-    if (parts.length >= 3) {
-      const videoId = parts.slice(0, -2).join('-');
-      if (!uniqueVideoIds.has(videoId)) {
-        uniqueVideoIds.add(videoId);
-        return true;
-      }
-      return false;
+  // Get programs for navigation (sequential through all programs)
+  const getPreviousProgram = (): TVProgram | null => {
+    const currentIndex = navigationIndex >= 0 ? navigationIndex : getCurrentProgramIndex();
+    if (currentIndex > 0) {
+      return sortedPrograms[currentIndex - 1];
     }
-    return true; // Keep if ID format is unexpected
-  }); // Show all unique videos (no limit)
-  
-  const nextProgram = getNextProgram(limitedPrograms);
-  const programRowMap = calculateRows(limitedPrograms);
-  
-  // Calculate max row number for height
-  const maxRow = limitedPrograms.length > 0 
-    ? Math.max(...Array.from(programRowMap.values()))
-    : 0;
-  
-  // Calculate card dimensions for consistent use
-  const cardHeight = isMobile ? 120 : 130; // Increased from 90 to 120 for better mobile visibility
-  const cardSpacing = isMobile ? 80 : 150;
-  const topOffset = isMobile ? 10 : 40; // Reduced from 20 to 10 to reduce white space
-  
-  // Calculate hour marker height based on program rows
-  const hourMarkerHeight = topOffset + (maxRow + 1) * (cardHeight + cardSpacing) - cardSpacing;
+    // If at the beginning, wrap to the last program
+    return sortedPrograms.length > 0 ? sortedPrograms[sortedPrograms.length - 1] : null;
+  };
+
+  const getNextProgramForNav = (): TVProgram | null => {
+    const currentIndex = navigationIndex >= 0 ? navigationIndex : getCurrentProgramIndex();
+    if (currentIndex < sortedPrograms.length - 1) {
+      return sortedPrograms[currentIndex + 1];
+    }
+    // If at the end, wrap to the first program
+    return sortedPrograms.length > 0 ? sortedPrograms[0] : null;
+  };
+
+  const getCurrentProgramForNav = (): TVProgram | null => {
+    const currentIndex = navigationIndex >= 0 ? navigationIndex : getCurrentProgramIndex();
+    return sortedPrograms[currentIndex] || currentProgram || null;
+  };
+
+  const previousProgram = getPreviousProgram();
+  const nextProgram = getNextProgramForNav();
+  const currentProgramForNav = getCurrentProgramForNav();
 
   const scrollToNow = () => {
     if (scrollContainerRef.current) {
@@ -164,6 +175,88 @@ export default function TVGuide() {
     }
     setSelectedDate(new Date());
   };
+
+  // Scroll to and highlight a program in the timeline
+  const scrollToProgram = (program: TVProgram | null) => {
+    if (!program || !scrollContainerRef.current) return;
+
+    // Set the program's date as selected date if it's on a different day
+    const programDate = new Date(program.startTime);
+    const programDay = new Date(programDate.getFullYear(), programDate.getMonth(), programDate.getDate());
+    const selectedDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    
+    if (programDay.getTime() !== selectedDay.getTime()) {
+      setSelectedDate(programDate);
+      // Wait for date change to update programs, then scroll
+      setTimeout(() => scrollToProgram(program), 100);
+      return;
+    }
+
+    // Get the program element
+    const programElement = programRefs.current.get(program.id);
+    if (programElement && scrollContainerRef.current) {
+      const containerRect = scrollContainerRef.current.getBoundingClientRect();
+      const programRect = programElement.getBoundingClientRect();
+      
+      // Calculate scroll position to center the program
+      const scrollLeft = scrollContainerRef.current.scrollLeft;
+      const programLeft = programElement.offsetLeft;
+      const programWidth = programElement.offsetWidth;
+      const containerWidth = scrollContainerRef.current.offsetWidth;
+      
+      // Center the program in the viewport
+      const targetScroll = programLeft - (containerWidth / 2) + (programWidth / 2);
+      
+      scrollContainerRef.current.scrollTo({
+        left: Math.max(0, targetScroll),
+        behavior: "smooth",
+      });
+
+      // Highlight the program
+      setSelectedProgramId(program.id);
+      
+      // Keep highlight longer for better visibility (5 seconds)
+      setTimeout(() => {
+        setSelectedProgramId(null);
+      }, 5000);
+    }
+  };
+
+  const handlePlayPrevious = useCallback(() => {
+    if (previousProgram) {
+      const currentIndex = navigationIndex >= 0 ? navigationIndex : getCurrentProgramIndex();
+      const newIndex = currentIndex > 0 ? currentIndex - 1 : sortedPrograms.length - 1;
+      setNavigationIndex(newIndex);
+      mediumTap(); // Haptic feedback
+      playProgram(previousProgram);
+      scrollToProgram(previousProgram);
+    }
+  }, [previousProgram, navigationIndex, sortedPrograms.length, getCurrentProgramIndex, playProgram, mediumTap]);
+
+  const handlePlayCurrent = useCallback(() => {
+    const programToPlay = currentProgramForNav || currentProgram;
+    if (programToPlay) {
+      const currentIndex = getCurrentProgramIndex();
+      setNavigationIndex(currentIndex);
+      mediumTap(); // Haptic feedback
+      playProgram(programToPlay);
+      scrollToProgram(programToPlay);
+    } else {
+      // If no current program, scroll to now
+      scrollToNow();
+    }
+  }, [currentProgramForNav, currentProgram, getCurrentProgramIndex, playProgram, mediumTap]);
+
+  const handlePlayNext = useCallback(() => {
+    if (nextProgram) {
+      const currentIndex = navigationIndex >= 0 ? navigationIndex : getCurrentProgramIndex();
+      const newIndex = currentIndex < sortedPrograms.length - 1 ? currentIndex + 1 : 0;
+      setNavigationIndex(newIndex);
+      mediumTap(); // Haptic feedback
+      playProgram(nextProgram);
+      scrollToProgram(nextProgram);
+    }
+  }, [nextProgram, navigationIndex, sortedPrograms.length, getCurrentProgramIndex, playProgram, mediumTap]);
 
   const getProgramTypeColor = (type: TVProgram["type"]) => {
     switch (type) {
@@ -180,47 +273,45 @@ export default function TVGuide() {
     }
   };
 
-  // Generate 24-hour timeline
   const hours = Array.from({ length: 24 }, (_, i) => i);
 
-  // Calculate program width and position based on actual scheduled time
   const getProgramPosition = (program: TVProgram) => {
     const dayStart = startOfDay(selectedDate);
-    const timelineWidth = 2400; // Fixed width: 100px per hour (24 hours = 2400px)
-    const dayDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-    
+    const timelineWidth = 2400;
+    const dayDuration = 24 * 60 * 60 * 1000;
+
     const programStart = new Date(program.startTime);
     const programEnd = new Date(program.endTime);
-    
-    // Normalize program times to the selected day
+
     const programStartOfDay = new Date(dayStart);
-    programStartOfDay.setHours(programStart.getHours(), programStart.getMinutes(), programStart.getSeconds());
-    
+    programStartOfDay.setHours(
+      programStart.getHours(),
+      programStart.getMinutes(),
+      programStart.getSeconds()
+    );
+
     const programEndOfDay = new Date(dayStart);
-    programEndOfDay.setHours(programEnd.getHours(), programEnd.getMinutes(), programEnd.getSeconds());
-    
-    // Calculate position in milliseconds from start of day
+    programEndOfDay.setHours(
+      programEnd.getHours(),
+      programEnd.getMinutes(),
+      programEnd.getSeconds()
+    );
+
     const startOffset = Math.max(0, programStartOfDay.getTime() - dayStart.getTime());
     const endOffset = Math.max(0, programEndOfDay.getTime() - dayStart.getTime());
     const duration = endOffset - startOffset;
-    
-    // Convert to pixels based on timeline width
+
     const leftPx = (startOffset / dayDuration) * timelineWidth;
     const widthPx = (duration / dayDuration) * timelineWidth;
-    
-    // Minimum card width for visibility
-    const minCardWidth = isMobile ? 160 : 180; // Increased from 140 to 160 for better mobile visibility
+
+    const minCardWidth = isMobile ? 160 : 180;
     const finalWidth = Math.max(widthPx, minCardWidth);
-    
-    // Gap between cards: 10% of minimum card width
-    const gapPx = Math.round(minCardWidth * 0.10);
-    
-    // Adjust width to account for gap (reduce width slightly to create visible gap)
+    const gapPx = Math.round(minCardWidth * 0.1);
     const adjustedWidth = Math.max(finalWidth - gapPx, minCardWidth * 0.8);
 
-    return { 
-      left: `${leftPx}px`, 
-      width: `${adjustedWidth}px`
+    return {
+      left: `${leftPx}px`,
+      width: `${adjustedWidth}px`,
     };
   };
 
@@ -228,51 +319,29 @@ export default function TVGuide() {
     const now = new Date();
     const programStart = new Date(program.startTime);
     const programEnd = new Date(program.endTime);
-    
-    // Check if current time falls within program time range
-    // Use getTime() for accurate comparison
-    // Allow a small tolerance (1 second) for timing precision
-    const tolerance = 1000; // 1 second
-    return (now.getTime() + tolerance) >= programStart.getTime() && (now.getTime() - tolerance) < programEnd.getTime();
+    const tolerance = 1000;
+    return (
+      now.getTime() + tolerance >= programStart.getTime() &&
+      now.getTime() - tolerance < programEnd.getTime()
+    );
   };
 
-  const currentTimePercent = () => {
-    const dayStart = startOfDay(currentTime).getTime();
-    const now = currentTime.getTime();
-    const dayDuration = 24 * 60 * 60 * 1000;
-    return ((now - dayStart) / dayDuration) * 100;
-  };
+  const handleCardClick = useCallback((program: TVProgram) => {
+    lightTap(); // Haptic feedback
+    playProgram(program);
+  }, [playProgram, lightTap]);
 
-  // Find video from program ID
-  const findVideoByProgramId = (programId: string): GalleryVideo | null => {
-    // Program ID format: `${video.id}-${day}-${videoIndex}`
-    // Try to match by removing the last two segments (day and videoIndex)
-    // Handle cases where video IDs might have dashes
-    for (const video of GALLERY_VIDEOS) {
-      // Check if program ID starts with video ID followed by dash and numbers
-      const pattern = new RegExp(`^${video.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d+-\\d+$`);
-      if (pattern.test(programId)) {
-        return video;
-      }
-      // Also try exact match in case the ID format is different
-      if (programId.startsWith(video.id)) {
-        return video;
-      }
-    }
-    return null;
-  };
+  const programTypes = Array.from(new Set(limitedPrograms.map((p) => p.type)));
 
-  // Handle card click
-  const handleCardClick = (program: TVProgram) => {
-    const video = findVideoByProgramId(program.id);
-    if (video) {
-      setSelectedVideo(video);
-      setIsModalOpen(true);
-    }
-  };
+  const cardHeight = isMobile ? 120 : 130;
+  const cardSpacing = isMobile ? 80 : 150;
+  const topOffset = isMobile ? 10 : 40;
 
   return (
-    <div className={`glass rounded-lg ${isMobile ? 'p-3' : 'p-4 md:p-6'} shadow-lg`} data-schedule>
+    <div
+      className={`glass rounded-lg ${isMobile ? "p-3" : "p-4 md:p-6"} shadow-lg`}
+      data-schedule
+    >
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
@@ -281,113 +350,192 @@ export default function TVGuide() {
             {t("tv.programGuide")}
           </h3>
           <p className="text-foreground/70 text-sm">
-            {isToday(selectedDate) ? t("schedule.today") : format(selectedDate, "EEEE, MMM d")}
+            {isToday(selectedDate)
+              ? t("schedule.today")
+              : format(selectedDate, "EEEE, MMM d")}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Date Navigation */}
-          <button
-            onClick={() => setSelectedDate(subDays(selectedDate, 1))}
-            className="p-1.5 md:p-2 glass rounded-lg hover:bg-[rgba(var(--foreground),0.12)] transition-colors text-foreground"
-            aria-label="Previous day"
-          >
-            <span className="text-foreground text-sm md:text-base">‹</span>
-          </button>
-          <button
-            onClick={scrollToNow}
-            className="px-3 py-1.5 md:px-4 md:py-2 bg-ministry-gold hover:bg-ministry-gold/90 text-white font-semibold rounded-lg transition-colors text-xs md:text-sm shadow-md hover:shadow-lg"
-          >
-            {t("tv.now")}
-          </button>
-          <button
-            onClick={() => setSelectedDate(addDays(selectedDate, 1))}
-            className="p-1.5 md:p-2 glass rounded-lg hover:bg-[rgba(var(--foreground),0.12)] transition-colors text-foreground"
-            aria-label="Next day"
-          >
-            <span className="text-foreground text-sm md:text-base">›</span>
-          </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-foreground/40" />
+            <input
+              type="text"
+              placeholder="Search programs..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-foreground/5 border border-foreground/10 rounded-lg text-foreground placeholder-foreground/30 focus:outline-none focus:border-ministry-gold text-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-foreground/40 hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Filter */}
+          <div className="relative">
+            <select
+              value={filterType || ""}
+              onChange={(e) => setFilterType(e.target.value || null)}
+              className="pl-10 pr-4 py-2 bg-foreground/5 border border-foreground/10 rounded-lg text-foreground focus:outline-none focus:border-ministry-gold text-sm appearance-none cursor-pointer"
+            >
+              <option value="">All Types</option>
+              {programTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </option>
+              ))}
+            </select>
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-foreground/40 pointer-events-none" />
+          </div>
+
+          {/* Program Navigation */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handlePlayPrevious}
+              disabled={!previousProgram}
+              className={`p-1.5 md:p-2 glass rounded-lg transition-colors text-sm md:text-base ${
+                previousProgram
+                  ? "text-foreground hover:bg-[rgba(var(--foreground),0.12)] cursor-pointer"
+                  : "text-foreground/30 cursor-not-allowed"
+              }`}
+              aria-label="Play previous program"
+              title={previousProgram ? "Play previous program" : "No previous program"}
+            >
+              <span>‹</span>
+            </button>
+            <button
+              onClick={handlePlayCurrent}
+              className={`px-3 py-1.5 md:px-4 md:py-2 font-semibold rounded-lg transition-colors text-xs md:text-sm shadow-md hover:shadow-lg ${
+                currentProgram
+                  ? "bg-ministry-gold hover:bg-ministry-gold/90 text-white"
+                  : "bg-foreground/10 hover:bg-foreground/20 text-foreground"
+              }`}
+              aria-label="Play current program"
+              title={currentProgram ? "Play current program" : "No current program - scroll to now"}
+            >
+              {t("tv.now")}
+            </button>
+            <button
+              onClick={handlePlayNext}
+              disabled={!nextProgram}
+              className={`p-1.5 md:p-2 glass rounded-lg transition-colors text-sm md:text-base ${
+                nextProgram
+                  ? "text-foreground hover:bg-[rgba(var(--foreground),0.12)] cursor-pointer"
+                  : "text-foreground/30 cursor-not-allowed"
+              }`}
+              aria-label="Play next program"
+              title={nextProgram ? "Play next program" : "No next program"}
+            >
+              <span>›</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Timeline View */}
       <div className="relative">
-        {/* Timeline Container with synchronized scrolling */}
         <div
           ref={scrollContainerRef}
           className="relative overflow-x-auto pb-4"
-          style={{ 
+          style={{
             scrollbarWidth: "thin",
             scrollBehavior: "smooth",
-            width: "100%"
+            width: "100%",
           }}
         >
-          {/* Time Labels - Positioned to match hour markers, scrolls with timeline */}
-          <div className={`relative ${isMobile ? 'mb-2' : 'mb-3'} ${isMobile ? 'px-1' : 'px-2'}`} style={{ width: '2400px', minHeight: '20px' }}>
-            {hours.filter((h) => h % 3 === 0).map((hour) => {
-              const date = new Date();
-              date.setHours(hour, 0, 0, 0);
-              const time12h = date.toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              });
-              // Position labels to match hour markers: hour 0 = 0px, hour 3 = 300px, etc. (100px per hour)
-              const labelPosition = (hour / 24) * 2400;
-              return (
-                <span 
-                  key={hour} 
-                  className={`absolute text-foreground/70 ${isMobile ? 'text-[10px]' : 'text-xs'} font-medium`}
-                  style={{ left: `${labelPosition}px`, transform: 'translateX(-50%)' }}
-                >
-                  {time12h}
-                </span>
-              );
-            })}
+          {/* Time Labels */}
+          <div
+            className={`relative ${isMobile ? "mb-2" : "mb-3"} ${isMobile ? "px-1" : "px-2"}`}
+            style={{ width: "2400px", minHeight: "20px" }}
+          >
+            {hours
+              .filter((h) => h % 3 === 0)
+              .map((hour) => {
+                const date = new Date();
+                date.setHours(hour, 0, 0, 0);
+                const time12h = date.toLocaleTimeString("en-US", {
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                });
+                const labelPosition = (hour / 24) * 2400;
+                return (
+                  <span
+                    key={hour}
+                    className={`absolute text-foreground/70 ${isMobile ? "text-[10px]" : "text-xs"} font-medium`}
+                    style={{ left: `${labelPosition}px`, transform: "translateX(-50%)" }}
+                  >
+                    {time12h}
+                  </span>
+                );
+              })}
           </div>
-          <div 
-            ref={timelineRef} 
+          <div
+            ref={timelineRef}
             className="relative"
-              style={{ 
-              width: '2400px', // Wide enough for 24-hour timeline (100px per hour)
-              minHeight: isMobile ? '140px' : '200px', // Reduced min height on mobile
-              paddingRight: isMobile ? '8px' : '32px', // Reduced padding on mobile
-              paddingLeft: isMobile ? '4px' : '16px', // Reduced padding on mobile
-              height: `${Math.max(isMobile ? 140 : 200, topOffset + cardHeight + (isMobile ? 10 : 20))}px` // Reduced bottom spacing on mobile
+            style={{
+              width: "2400px",
+              minHeight: isMobile ? "140px" : "200px",
+              paddingRight: isMobile ? "8px" : "32px",
+              paddingLeft: isMobile ? "4px" : "16px",
+              height: `${Math.max(isMobile ? 140 : 200, topOffset + cardHeight + (isMobile ? 10 : 20))}px`,
             }}
           >
-            {/* Hour Markers - Positioned to match timeline width (2400px = 100px per hour) */}
-            {hours.filter((h) => h % 3 === 0).map((hour) => {
-              // Position markers at exact pixel positions: hour 0 = 0px, hour 3 = 300px, etc.
-              const markerPosition = (hour / 24) * 2400;
-              return (
-                <div
-                  key={hour}
-                  className="absolute border-l border-[rgba(var(--foreground),0.15)]"
-                  style={{ 
-                    left: `${markerPosition}px`,
-                    top: `${topOffset}px`,
-                    height: `${cardHeight + 10}px`
-                  }}
-                />
-              );
-            })}
+            {/* Hour Markers */}
+            {hours
+              .filter((h) => h % 3 === 0)
+              .map((hour) => {
+                const markerPosition = (hour / 24) * 2400;
+                return (
+                  <div
+                    key={hour}
+                    className="absolute border-l border-[rgba(var(--foreground),0.15)]"
+                    style={{
+                      left: `${markerPosition}px`,
+                      top: `${topOffset}px`,
+                      height: `${cardHeight + 10}px`,
+                    }}
+                  />
+                );
+              })}
 
-            {/* Program Blocks - Positioned based on scheduled time with gaps between them */}
+            {/* Program Blocks */}
             {limitedPrograms.map((program, index) => {
               const position = getProgramPosition(program);
               const isCurrent = isProgramCurrent(program);
-              const row = 0; // All cards in one row for simplicity
+              const isSelected = selectedProgramId === program.id;
               const topPx = topOffset;
 
               return (
                 <motion.div
                   key={program.id}
+                  ref={(el) => {
+                    if (el) {
+                      programRefs.current.set(program.id, el);
+                    } else {
+                      programRefs.current.delete(program.id);
+                    }
+                  }}
                   initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  onClick={() => handleCardClick(program)}
-                  className={`absolute rounded-lg ${isMobile ? 'p-1.5' : 'p-2 sm:p-3 md:p-4'} cursor-pointer hover:scale-[1.03] active:scale-[0.97] transition-all border-2 shadow-lg touch-manipulation ${
-                    isCurrent
+                  animate={{ 
+                    opacity: 1, 
+                    scale: isSelected ? 1.05 : 1,
+                  }}
+                  onClick={() => {
+                    handleCardClick(program);
+                    setSelectedProgramId(program.id);
+                    setTimeout(() => setSelectedProgramId(null), 3000);
+                  }}
+                  className={`absolute rounded-lg ${isMobile ? "p-1.5" : "p-2 sm:p-3 md:p-4"} cursor-pointer hover:scale-[1.03] active:scale-[0.97] transition-all border-2 shadow-lg touch-manipulation group ${
+                    isSelected
+                      ? "bg-ministry-gold/40 dark:bg-ministry-gold/50 border-ministry-gold border-[3px] z-[100] shadow-2xl shadow-ministry-gold/70 ring-4 ring-ministry-gold/30 animate-pulse"
+                      : isCurrent && !isSelected
                       ? "bg-white dark:bg-neutral-800 border-blue-400/60 z-10"
                       : "bg-white/95 dark:bg-neutral-800/95 border-gray-200 dark:border-neutral-600 hover:border-ministry-gold hover:shadow-xl z-0"
                   }`}
@@ -396,15 +544,27 @@ export default function TVGuide() {
                     width: position.width,
                     top: `${topPx}px`,
                     height: `${cardHeight}px`,
-                    opacity: isCurrent ? 1 : 1, // Current program: 0% transparency (fully opaque)
-                    ...(isCurrent ? {
-                      boxShadow: '0 4px 20px rgba(59, 130, 246, 0.3), 0 8px 30px rgba(59, 130, 246, 0.2), 0 2px 8px rgba(59, 130, 246, 0.15)', // Soft blue shadow
-                      borderColor: 'rgba(59, 130, 246, 0.4)',
-                    } : {}),
+                    zIndex: isSelected ? 100 : isCurrent ? 10 : 0,
+                    ...(isSelected
+                      ? {
+                          boxShadow:
+                            "0 12px 40px rgba(212, 175, 55, 0.6), 0 16px 50px rgba(212, 175, 55, 0.5), 0 8px 20px rgba(212, 175, 55, 0.4), 0 0 0 4px rgba(212, 175, 55, 0.2)",
+                          borderColor: "rgb(212, 175, 55)",
+                          transform: "scale(1.05)",
+                        }
+                      : isCurrent && !isSelected
+                      ? {
+                          boxShadow:
+                            "0 4px 20px rgba(59, 130, 246, 0.3), 0 8px 30px rgba(59, 130, 246, 0.2), 0 2px 8px rgba(59, 130, 246, 0.15)",
+                          borderColor: "rgba(59, 130, 246, 0.4)",
+                        }
+                      : {}),
                   }}
                 >
                   {program.thumbnail && (
-                    <div className={`absolute inset-0 rounded-md overflow-hidden ${isCurrent ? 'opacity-100' : 'opacity-40'}`}>
+                    <div
+                      className={`absolute inset-0 rounded-md overflow-hidden ${isCurrent ? "opacity-100" : "opacity-40"}`}
+                    >
                       <img
                         src={program.thumbnail}
                         alt={program.title}
@@ -412,20 +572,27 @@ export default function TVGuide() {
                       />
                     </div>
                   )}
-                  <div className={`relative z-10 h-full flex flex-col justify-between rounded-md ${isMobile ? 'p-1.5' : 'p-1 sm:p-1.5 md:p-2'}`}>
-                    {/* Category badge at top left */}
-                    <div className="flex-shrink-0">
+                  <div
+                    className={`relative z-10 h-full flex flex-col justify-between rounded-md ${isMobile ? "p-1.5" : "p-1 sm:p-1.5 md:p-2"}`}
+                  >
+                    <div className="flex-shrink-0 flex items-start justify-between">
                       <span
-                        className={`inline-block ${isMobile ? 'px-1.5 py-0.5 text-[9px]' : 'px-1 sm:px-1.5 py-0.5 text-[7px] sm:text-[8px] md:text-[9px]'} ${getProgramTypeColor(program.type)} text-white font-bold rounded shadow-sm`}
+                        className={`inline-block ${isMobile ? "px-1.5 py-0.5 text-[9px]" : "px-1 sm:px-1.5 py-0.5 text-[7px] sm:text-[8px] md:text-[9px]"} ${getProgramTypeColor(program.type)} text-white font-bold rounded shadow-sm`}
                       >
                         {program.type}
                       </span>
+                      <Play className="w-3 h-3 text-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    {/* Title at bottom left */}
                     <div className="flex-shrink-0 mt-auto">
-                      <h4 className={`font-semibold text-gray-900 dark:text-white ${isMobile ? 'text-xs' : 'text-[10px] sm:text-xs md:text-sm'} line-clamp-2 ${isMobile ? 'leading-snug' : 'leading-tight sm:leading-snug'} drop-shadow-sm text-left`}>
+                      <h4
+                        className={`font-semibold text-gray-900 dark:text-white ${isMobile ? "text-xs" : "text-[10px] sm:text-xs md:text-sm"} line-clamp-2 ${isMobile ? "leading-snug" : "leading-tight sm:leading-snug"} drop-shadow-sm text-left`}
+                      >
                         {pick(program.title, program.titleLocalized)}
                       </h4>
+                      <p className="text-[8px] text-foreground/60 mt-1">
+                        {formatProgramTime(program.startTime)} -{" "}
+                        {formatProgramTime(program.endTime)}
+                      </p>
                     </div>
                   </div>
                 </motion.div>
@@ -438,34 +605,25 @@ export default function TVGuide() {
       {/* Next Program Info */}
       <div className={isMobile ? "mt-4" : "mt-6"}>
         {nextProgram && (
-          <div className={`${isMobile ? 'p-3' : 'p-4'} bg-[rgba(var(--foreground),0.08)] border border-[rgba(var(--foreground),0.15)] rounded-lg`}>
-            <div className={`flex items-center gap-2 ${isMobile ? 'mb-1.5' : 'mb-2'}`}>
-              <Clock className={`${isMobile ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-ministry-gold`} />
-              <span className={`text-ministry-gold font-semibold ${isMobile ? 'text-xs' : 'text-sm'}`}>
+          <div
+            className={`${isMobile ? "p-3" : "p-4"} bg-[rgba(var(--foreground),0.08)] border border-[rgba(var(--foreground),0.15)] rounded-lg`}
+          >
+            <div className={`flex items-center gap-2 ${isMobile ? "mb-1.5" : "mb-2"}`}>
+              <Clock className={`${isMobile ? "w-3.5 h-3.5" : "w-4 h-4"} text-ministry-gold`} />
+              <span className={`text-ministry-gold font-semibold ${isMobile ? "text-xs" : "text-sm"}`}>
                 {t("tv.upNext")}: {getTimeUntil(nextProgram)}
               </span>
             </div>
-            <h5 className={`font-serif font-bold text-foreground ${isMobile ? 'text-sm mb-0.5' : 'mb-1'}`}>
+            <h5 className={`font-serif font-bold text-foreground ${isMobile ? "text-sm mb-0.5" : "mb-1"}`}>
               {pick(nextProgram.title, nextProgram.titleLocalized)}
             </h5>
-            <p className={`text-foreground/70 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+            <p className={`text-foreground/70 ${isMobile ? "text-xs" : "text-sm"}`}>
               {formatProgramTime(nextProgram.startTime)} -{" "}
               {formatProgramTime(nextProgram.endTime)}
             </p>
           </div>
         )}
       </div>
-
-      {/* Video Player Modal */}
-      <VideoPlayerModal
-        video={selectedVideo}
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setSelectedVideo(null);
-        }}
-      />
     </div>
   );
 }
-
